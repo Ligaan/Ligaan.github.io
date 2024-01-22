@@ -549,3 +549,55 @@ void DQN::resetLearning()
     optimizer = new torch::optim::Adam(q_network->parameters(), adamOptions);
 }
 ```
+
+Now lets see how we will used everything above
+
+```C++
+const int max_episodes = 2000;
+const int max_steps = 2000;
+const int print_every = 100;
+
+const float eps_start = 1.0f;
+const float eps_decay = 100000;
+const float eps_min = 0.01f;
+
+ agent = new DQN(6, 5, 0);  //(8, 4, 0);
+ env = new Lunar_Lander(projectionDimensions);
+
+Action action = Action::Nothing;
+
+int episode = 1;
+int stepsDone = 0;
+float score = 0;
+int t = max_steps;
+
+float eps = eps_start;
+
+State state;
+
+Step_return step_return;
+
+   for(int episode = 0; episode <= max_episodes; episode++)
+   {
+       while (t > 0 && !done)
+       {
+        eps = eps_min + (eps_start - eps_min) * exp(-1. * stepsDone / eps_decay);
+        action = static_cast<Action>(agent->act(env->StateToFloat_State(env->squizzForNetwork(env->currentState)), eps));
+        step_return = env->step(dt,action);
+
+        agent->step(env->StepReturnToFloatStepReturn(step_return));
+        done = step_return.terminated;
+        t--;
+       }
+           if (episode % print_every == 0)
+           {
+               path = path + std::to_string(episode) + ".pth";
+               agent->checkpoint(path);
+           }
+           env->reset();
+           score = 0.0f;
+           done = false;
+           t = max_steps;
+       }
+   }
+```
