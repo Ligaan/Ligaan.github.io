@@ -1,5 +1,4 @@
-## Reinforcement Learning in C++
-### Implementation focused
+## Reinforcement Learning in C++ (Implementation focused)
 
 ### Introduction
 
