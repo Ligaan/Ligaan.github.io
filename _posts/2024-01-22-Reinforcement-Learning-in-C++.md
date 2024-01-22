@@ -217,6 +217,16 @@ We'll start with the network first.
 #include <torch/nn/module.h>
 #include <torch/optim.h>
 #include <torch/torch.h>
+#include <torch/serialize/output-archive.h>
+
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <iostream>
+#include <iterator>
+#include <random>
+
+#include "Reinforcement_Learning/Environment_Return_Values.h"
 
 struct Tensor_step_return
 {
@@ -268,5 +278,274 @@ void QNetworkImpl::resetNetwork()
     {
         layer.reset();
     }
+}
+```
+Then we will create the memory buffer class which will be responsible for sampling previouse random states of the environment.
+
+```C++
+class ReplayBuffer
+{
+public:
+    ReplayBuffer(int state_size, int action_size, int buffer_size, int batch_size, int seed);
+    ReplayBuffer(int action_size, int buffer_size, int batch_size);
+    ReplayBuffer(){};
+
+    void add(Full_Float_Step_Return experience);  //(State state, Action action, float reward, State next_state, bool done);
+    void addBulk(std::vector<Full_Float_Step_Return>& experiences);
+    Tensor_step_return sample();
+
+    int state_size;
+    int action_size;
+    int buffer_size;
+    int batch_size;
+
+    std::vector<Full_Float_Step_Return> experiences;
+    int seed;
+
+    std::vector<float> actions;
+    std::vector<float> rewards;
+    std::vector<float> dones;
+};
+```
+```C++
+ReplayBuffer::ReplayBuffer(int state_size, int action_size, int buffer_size, int batch_size, int seed)
+{
+    this->state_size = state_size;
+    this->action_size = action_size;
+    this->buffer_size = buffer_size;
+    this->batch_size = batch_size;
+    this->seed = seed;
+}
+
+ReplayBuffer::ReplayBuffer(int action_size, int buffer_size, int batch_size)
+{
+    this->buffer_size = buffer_size;
+    this->batch_size = batch_size;
+    this->seed = seed;
+}
+
+void ReplayBuffer::add(Full_Float_Step_Return experience)
+{
+    experiences.push_back(experience);
+    if (experiences.size() > buffer_size) experiences.erase(experiences.begin());
+}
+
+void ReplayBuffer::addBulk(std::vector<Full_Float_Step_Return>& experiences)
+{
+    this->experiences.insert(this->experiences.end(), std::make_move_iterator(experiences.begin()),
+                             std::make_move_iterator(experiences.end()));
+    if (this->experiences.size() > buffer_size)
+    {
+        this->experiences.erase(this->experiences.begin(),
+                                this->experiences.begin() + (this->experiences.size() - buffer_size));
+    }
+}
+
+Tensor_step_return ReplayBuffer::sample()
+{
+    Tensor_step_return tensor;
+    std::vector<Full_Float_Step_Return> batch;
+    std::sample(experiences.begin(), experiences.end(), std::back_inserter(batch), batch_size,
+                std::mt19937{std::random_device{}()});
+    std::shuffle(batch.begin(), batch.end(), std::mt19937{std::random_device{}()});
+
+    rewards.clear();
+    actions.clear();
+    dones.clear();
+
+    torch::Tensor ns_tensor, s_tensor;
+
+    int i = 0;
+    for (auto& experience : batch)
+    {
+        i++;
+        s_tensor = torch::from_blob((float*)(experience.data.data()), state_size);
+        if (i > 1)
+            tensor.states = torch::cat({tensor.states, s_tensor.unsqueeze(0)}, 0);
+        else
+            tensor.states = torch::cat({s_tensor.unsqueeze(0)}, 0);
+
+        s_tensor = torch::from_blob((float*)(experience.data.data() + state_size), state_size);
+        if (i > 1)
+            tensor.next_states = torch::cat({tensor.next_states, s_tensor.unsqueeze(0)}, 0);
+        else
+            tensor.next_states = torch::cat({s_tensor.unsqueeze(0)}, 0);
+
+        rewards.push_back(experience.data[state_size * 2]);
+        actions.push_back(experience.data[state_size * 2 + 1]);
+        dones.push_back(experience.data[state_size * 2 + 2]);
+        if (i == BATCH_SIZE) break;
+    }
+
+    tensor.actions = torch::from_blob((float*)(actions.data()), actions.size()).unsqueeze(1);
+    tensor.rewards = torch::from_blob((float*)(rewards.data()), rewards.size()).unsqueeze(1);
+    tensor.dones = torch::from_blob((float*)(dones.data()), dones.size()).unsqueeze(1);
+    return tensor;
+}
+```
+And lastly the DQN algorithm class
+```C++
+class DQN
+{
+public:
+    DQN(int state_size, int action_size, int seed);
+    DQN(int state_size, int action_size);
+    DQN(){};
+    void step();  //(State state, Action action, float reward, State next_state, bool done);
+    void addToExperienceBuffer(Full_Float_Step_Return value);
+    void addToExperienceBufferInBulk(std::vector<Full_Float_Step_Return>& values);
+    int act(Float_State state, float epsilon);
+    void learn(Tensor_step_return experiences);
+    void update_fixed_network(QNetwork& local_model, QNetwork& target_model);
+    void checkpoint(std::string filepath);
+    void loadCheckpoint(std::string filepath);
+    void resetLearning();
+
+    int state_size, action_size, seed;
+
+    QNetwork q_network, fixed_network;
+    torch::optim::Adam* optimizer;
+
+    ReplayBuffer buffer;
+    int timestep = 0;
+
+    int whenToPrint = 1000;
+    int currentStep = 0;
+};
+```
+```C++
+unsigned seed;
+const int BUFFER_SIZE = int(2e5);  // 1e5
+const int BATCH_SIZE = /*128*/ 64;
+const float GAMMA = 0.99f;
+float TAU = 1e-3;
+float LR = 5e-4;
+int UPDATE_EVERY = 32; /*16;*/
+
+DQN::DQN(int state_size, int action_size, int seed)
+{
+    this->state_size = state_size;
+    this->action_size = action_size;
+    this->seed = seed;
+
+    q_network = QNetwork(state_size, action_size, seed);
+    fixed_network = QNetwork(state_size, action_size, seed);
+    auto adamOptions = torch::optim::AdamOptions(0.0001);
+    optimizer = new torch::optim::Adam(q_network->parameters(), adamOptions);
+    buffer = ReplayBuffer(state_size, action_size, BUFFER_SIZE, BATCH_SIZE, seed);
+}
+
+DQN::DQN(int state_size, int action_size) { DQN(state_size, action_size, 0); }
+
+void DQN::step()
+{
+    if (timestep >= UPDATE_EVERY)
+    {
+        if (buffer.experiences.size() > BATCH_SIZE)
+        {
+            Tensor_step_return sampled_experiences = buffer.sample();
+            // printf("%i\n",buffer.experiences.size());
+            learn(sampled_experiences);
+        }
+        timestep = timestep % UPDATE_EVERY;
+    }
+}
+
+void DQN::addToExperienceBuffer(Full_Float_Step_Return value)
+{
+    buffer.add(value);  //(state, action, reward, next_state, done);
+    timestep++;
+}
+
+void DQN::addToExperienceBufferInBulk(std::vector<Full_Float_Step_Return>& values)
+{
+    timestep += values.size();
+    buffer.addBulk(values);
+}
+
+int DQN::act(Float_State state, float epsilon)
+{
+    torch::NoGradGuard no_grad;
+
+    int action;
+    float r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    if (r > epsilon)
+    {
+        torch::Tensor t_state = torch::from_blob((float*)(state.state.data()), state_size).unsqueeze(0);
+        torch::Tensor action_values;
+
+        action_values = q_network->forward(t_state);
+        action = static_cast<int>(torch::argmax(action_values).item().toInt() % action_size);
+        currentStep++;
+        // std::cout << t_state << "\n" << action_values << "\n" << action << "\n\n";
+        currentStep -= whenToPrint;
+    }
+    else
+    {
+        action = static_cast<int>(rand() % action_size);
+    }
+    // std::cout << "\n" << action << "\n";
+    return action;
+}
+
+void DQN::learn(Tensor_step_return experiences)
+{
+    // this->q_network->train();
+
+    torch::Tensor action_values;
+    torch::Tensor max_action_values;
+
+    {
+        torch::NoGradGuard no_grad;
+
+        action_values = fixed_network->forward(experiences.next_states).detach();
+        auto [ttt, stuff] = action_values.max(1);
+        max_action_values = ttt.unsqueeze(1);
+    }
+
+    torch::Tensor Q_target = experiences.rewards + (GAMMA * max_action_values * (1 - experiences.dones));
+    torch::Tensor Q_expected = q_network->forward(experiences.states).gather(1, experiences.actions.to(torch::kLong));
+    torch::Tensor loss = torch::nn::functional::mse_loss(Q_expected, Q_target);
+    // std::cout << Q_target << "\n" << Q_expected << "\n" << loss << "\n";
+    optimizer->zero_grad();
+
+    loss.backward();
+    optimizer->step();
+
+    update_fixed_network(q_network, fixed_network);
+
+    // this->q_network->eval();
+}
+
+void DQN::update_fixed_network(QNetwork& local_model, QNetwork& target_model)
+{
+    torch::NoGradGuard no_grad;
+
+    for (int i = 0; i < q_network->parameters().size(); i++)
+    {
+        fixed_network->parameters()[i].data().copy_(TAU * q_network->parameters()[i].data() +
+                                                    (1.0f - TAU) * fixed_network->parameters()[i].data());
+    }
+}
+
+void DQN::checkpoint(std::string filepath)
+{
+    torch::save(q_network, (filepath + "_network.pt").c_str());
+    torch::save(*optimizer, (filepath + "_optimizer.pt").c_str());
+}
+
+void DQN::loadCheckpoint(std::string filepath)
+{
+    torch::load(q_network, (filepath + "_network.pt").c_str());
+    torch::load(*optimizer, (filepath + "_optimizer.pt").c_str());
+}
+
+void DQN::resetLearning()
+{
+    q_network->resetNetwork();
+    fixed_network->resetNetwork();
+    delete optimizer;
+    auto adamOptions = torch::optim::AdamOptions(0.0001);
+    optimizer = new torch::optim::Adam(q_network->parameters(), adamOptions);
 }
 ```
