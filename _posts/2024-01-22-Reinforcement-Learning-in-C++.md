@@ -34,6 +34,7 @@ const int observation_space=16, action_space=4;
 
 float q_table[observation_space][action_space] = {0.0f};
 ```
+
 Then we will create some functions to help us during the training.
 
 ```C++
@@ -94,8 +95,8 @@ int epsilon_greedy_policy(int state)
 
 This is implementation of Deep-Learning works by reseting the environment to its initial state at the start of each episode.
 During the episode, in each step you will get an action based on the current state of the environmen from the greedy policy. Then you update the environment based on the action that you get and lastly you update the Q-table based on the previouse state, current state, the action that you took and the reward that you get from the environmen for that action.
-```C++
 
+```C++
 void main()
 {
     // Move player
@@ -127,7 +128,6 @@ return 0;
 Lastly this is how the reward function and the environment will look.
 
 ```C++
-
 step_return_values env_step(int state,int action) {
     int l_state=0;
     switch (action)
@@ -186,7 +186,6 @@ step_return_values env_step(int state,int action) {
 int reset_env() {
     return 0;
 }
-
 ```
 
 As for using the model, you could do something like this after training.
