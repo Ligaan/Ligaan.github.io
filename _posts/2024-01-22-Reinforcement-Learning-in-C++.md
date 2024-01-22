@@ -10,4 +10,4 @@ After reading this blog and the associated materials you should be able to succe
 
 ## Deep-Learning with the Frozen Lake environment
 
-### Some usefull materials: [Hugging Face Deep RL course (Deep-Learning with Frozen Lake)](https://link-url-here.org) and [RL bool for beginners](http://incompleteideas.net/book/RLbook2020.pdf)
+### Some usefull materials: [Hugging Face Deep RL course (Deep-Learning with Frozen Lake)]([https://link-url-here.org](https://huggingface.co/learn/deep-rl-course/unit2/hands-on)) and [RL bool for beginners](http://incompleteideas.net/book/RLbook2020.pdf)
