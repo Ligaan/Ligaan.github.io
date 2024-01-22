@@ -200,3 +200,73 @@ for(int t = 0; t<max_steps && !done; t++)
         t++;
       }     
 ```
+
+## DQN with Moon Lander and Racing Track
+
+Now that we are done with our first RL algorithm you might have already seen the drawbacks of Deep-Learning such as the fact that you would need to create a Q-table based on all the states that an environemnt could happen to be in and the actions that could be taken in that mentioned state. This could get really hard or close to impossible to represent with an environment that is in a continuous state such as a racing game for example. This is where DQN comes into place by using a network to approximate the value of taking an action a in a state s.
+
+For the start lets get starting with the DQN algorithm first, but before that you will need to set up pytorch (the network library) for visual studion. This should show you [how to set it up](https://khushi-411.github.io/setting-pytorch-api-c++/) and [this is for downloading pytorch](https://pytorch.org/get-started/locally/). An always usefull link is the [pytorch C++ documentation](https://pytorch.org/cppdocs/frontend.html).
+
+Now that we have everything that we need lest jump into it
+
+We'll start with the network first.
+```C++
+#pragma once
+#include <torch/nn.h>
+#include <torch/nn/functional.h>
+#include <torch/nn/module.h>
+#include <torch/optim.h>
+#include <torch/torch.h>
+
+struct Tensor_step_return
+{
+    torch::Tensor states;
+    torch::Tensor actions;
+    torch::Tensor next_states;
+    torch::Tensor rewards;
+    torch::Tensor dones;
+};
+
+class QNetworkImpl : public torch::nn::Module
+{
+public:
+    QNetworkImpl(int state_size, int action_size, int seed);
+    QNetworkImpl(int state_size, int action_size);
+    QNetworkImpl(){};
+    torch::Tensor forward(torch::Tensor x);
+    void resetNetwork();
+
+    torch::nn::Linear fc1{nullptr}, fc2{nullptr}, fc3{nullptr};
+};
+
+TORCH_MODULE(QNetwork);
+```
+```C++
+QNetworkImpl::QNetworkImpl(int state_size, int action_size, int seed)
+{
+    torch::manual_seed(seed);
+    fc1 = register_module("fc1", torch::nn::Linear(state_size, 128));
+    fc2 = register_module("fc2", torch::nn::Linear(128, 128));
+    fc3 = register_module("fc3", torch::nn::Linear(128, action_size));
+}
+
+QNetworkImpl::QNetworkImpl(int state_size, int action_size) { QNetwork(state_size, action_size, 0); }
+
+torch::Tensor QNetworkImpl::forward(torch::Tensor x)
+{
+    x = fc1(x);
+    x = torch::relu(x);
+    x = fc2(x);
+    x = torch::relu(x);
+    x = fc3(x);
+    return x;
+}
+
+void QNetworkImpl::resetNetwork()
+{
+    for (auto& layer : this->children())
+    {
+        layer.reset();
+    }
+}
+```
