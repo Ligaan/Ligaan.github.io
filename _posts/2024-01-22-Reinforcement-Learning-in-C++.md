@@ -205,7 +205,7 @@ for(int t = 0; t<max_steps && !done; t++)
 
 Now that we are done with our first RL algorithm you might have already seen the drawbacks of Deep-Learning such as the fact that you would need to create a Q-table based on all the states that an environemnt could happen to be in and the actions that could be taken in that mentioned state. This could get really hard or close to impossible to represent with an environment that is in a continuous state such as a racing game for example. This is where DQN comes into place by using a network to approximate the value of taking an action a in a state s.
 
-For the start lets get starting with the DQN algorithm first, but before that you will need to set up pytorch (the network library) for visual studion. This should show you [how to set it up](https://khushi-411.github.io/setting-pytorch-api-c++/) and [this is for downloading pytorch](https://pytorch.org/get-started/locally/). An always usefull link is the [pytorch C++ documentation](https://pytorch.org/cppdocs/frontend.html).
+For the start lets get starting with the DQN algorithm first, but before that you will need to set up pytorch (the network library) for visual studion. This should show you [how to set it up](https://khushi-411.github.io/setting-pytorch-api-c++/), [this is for downloading pytorch](https://pytorch.org/get-started/locally/) and this is the [python tutorial](https://anvilproject.org/guides/content/creating-links) that I based my arhitecture on. An always usefull link is the [pytorch C++ documentation](https://pytorch.org/cppdocs/frontend.html).
 
 Now that we have everything that we need lest jump into it
 
@@ -226,7 +226,25 @@ We'll start with the network first.
 #include <iterator>
 #include <random>
 
-#include "Reinforcement_Learning/Environment_Return_Values.h"
+struct Float_State
+{
+    std::vector<float> state;
+};
+
+struct Float_Step_Return
+{
+    Float_State state;
+    Float_State next_state;
+    float action;
+    float reward;
+    float terminated;
+    float truncated;
+};
+
+struct Full_Float_Step_Return
+{
+    std::vector<float> data;
+};
 
 struct Tensor_step_return
 {
@@ -701,3 +719,8 @@ action = static_cast<Action>(torch::argmax(action_values).item().toInt() % agent
 dt = 0.005f;
 env->step(0.005f, action);
 ```
+Now that we are done with the DQN its time to discuse a bit about environments.
+
+When training agent one in RL one of the most important if not the most important part of the training is the reward system. A good reward system could stimulate the agent to learn better and faster while a bad reward system could make the agent fail to learn something usefull. This shows some of the [gym environments](https://github.com/openai/gym/tree/master/gym/envs) whic might be a good space to look for examples.
+
+Now the first example that I created is Lunar Lander
