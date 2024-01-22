@@ -14,25 +14,25 @@ After reading this blog and the associated materials you should be able to succe
 
 
 We will start by initializing the values for the Deep Learning algorithm. The environment that we will be using will be a grid of 4X4.
-```C++
-float l_epsilon = 0.9f; // this means that there is a 90% change to select a random action
-const float max_epsilon = 1.0f; // epsilon initial value
-const float min_epsilon = 0.05f; // epsilon final value (5% chance for a random action)
-const float decay_rate = 0.0005f; // the decay rate for epsilon
+```cpp
+    float l_epsilon = 0.9f; // this means that there is a 90% change to select a random action
+    const float max_epsilon = 1.0f; // epsilon initial value
+    const float min_epsilon = 0.05f; // epsilon final value (5% chance for a random action)
+    const float decay_rate = 0.0005f; // the decay rate for epsilon
 
-const int total_episodes = 1000; // the number of episodes that the model will be trained for
-const int n_eval_episodes = 100; // this is for evaluating from 100 to 100 episodes during training
-const int max_steps = 99; // the maximum number of steps that an agent can take inside the environment
-const float lr_rate = 0.7f; // the learning rate for the Q table
-const float gamma = 0.95f;
+    const int total_episodes = 1000; // the number of episodes that the model will be trained for
+    const int n_eval_episodes = 100; // this is for evaluating from 100 to 100 episodes during training
+    const int max_steps = 99; // the maximum number of steps that an agent can take inside the environment
+    const float lr_rate = 0.7f; // the learning rate for the Q table
+    const float gamma = 0.95f;
 
-int RandomInt(int min, int max) { return min + (rand() % static_cast<int>(max - min + 1)); }
+    int RandomInt(int min, int max) { return min + (rand() % static_cast<int>(max - min + 1)); }
 
-int target = 0;
-int tiles[4][4] = {{3, 0, 0, 0}, {0, 1, 0, 1}, {0, 0, 0, 1}, {1, 0, 0, 2}};
-const int observation_space=16, action_space=4;
+    int target = 0;
+    int tiles[4][4] = {{3, 0, 0, 0}, {0, 1, 0, 1}, {0, 0, 0, 1}, {1, 0, 0, 2}};
+    const int observation_space=16, action_space=4;
 
-float q_table[observation_space][action_space] = {0.0f};
+    float q_table[observation_space][action_space] = {0.0f};
 ```
 
 Then we will create some functions to help us during the training.
