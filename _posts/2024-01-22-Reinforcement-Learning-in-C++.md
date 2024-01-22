@@ -561,13 +561,11 @@ const float eps_start = 1.0f;
 const float eps_decay = 100000;
 const float eps_min = 0.01f;
 
- agent = new DQN(6, 5, 0);  //(8, 4, 0);
+ agent = new DQN(8, 4, 0);// state size = 8 and action size = 4 for Lunar Lander
  env = new Lunar_Lander(projectionDimensions);
 
 Action action = Action::Nothing;
 
-int episode = 1;
-int stepsDone = 0;
 float score = 0;
 int t = max_steps;
 
@@ -582,10 +580,11 @@ Step_return step_return;
        while (t > 0 && !done)
        {
         eps = eps_min + (eps_start - eps_min) * exp(-1. * stepsDone / eps_decay);
-        action = static_cast<Action>(agent->act(env->StateToFloat_State(env->squizzForNetwork(env->currentState)), eps));
-        step_return = env->step(dt,action);
+        action = static_cast<Action>(agent->act(envs[i].env->StateToFloat_State(envs[i].env->squizzForNetwork(envs[i].env->currentState)), eps));
+        step_return = envs[i].env->step(/*dt*/ 0.005f, action);
 
-        agent->step(env->StepReturnToFloatStepReturn(step_return));
+        agent->addToExperienceBuffer(envs[i].env->StepReturnToFullFLoatStepReturn(step_return));//adds the experience to the buffer
+        agent->step(); //updates the network
         done = step_return.terminated;
         t--;
        }
@@ -599,5 +598,88 @@ Step_return step_return;
            done = false;
            t = max_steps;
        }
+   }
+```
+Now updating the network based on the previouse experiences that we collected, so the next step would be to use multiple environments at once for training, maybe something like this.
+
+```C++
+const int max_episodes = 2000;
+const int max_steps = 2000;
+const int print_every = 100;
+
+const float eps_start = 1.0f;
+const float eps_decay = 100000;
+const float eps_min = 0.01f;
+
+const int nEnv = 32;
+
+struct Environment{
+ Lunar_Lander* env;
+ bool done = false;
+int steps = 0;
+};
+
+ agent = new DQN(8, 4, 0);// state size = 8 and action size = 4 for Lunar Lander
+std::vector<Environment> envs;
+
+for(int i=0;i<nEnv;i++){
+envs.push_back(Environment{});//projection dimension is half of the game screen width and half of the screen height
+envs[i].env = new Lunar_Lander(projectionDimensions);
+}
+Action action = Action::Nothing;
+
+float score = 0;
+int t = max_steps;
+
+float eps = eps_start;
+
+State state;
+bool done;
+
+Step_return step_return;
+
+   for(int episode = 0; episode <= max_episodes; episode++)
+   {
+    done = true;
+    for (int i = 0; i < nEnv; i++)
+    {
+        done = done && envs[i].done;
+    }
+    while (!done)
+    {
+        for (int i = 0; i < nEnv; i++)
+        {
+            if (!envs[i].done)
+            {
+                eps = eps_min + (eps_start - eps_min) * exp(-1. * stepsDone / eps_decay);
+                action = static_cast<Action>(agent->act(
+                envs[i].env->StateToFloat_State(envs[i].env->squizzForNetwork(envs[i].env->currentState)), eps));
+                step_return = envs[i].env->step(0.005f, action);
+                steps.push_back(envs[i].env->StepReturnToFullFLoatStepReturn(step_return));
+                envs[i].steps++;
+
+                if (step_return.terminated || envs[i].steps >= max_steps)
+                {
+                    envs[i].done = true;
+                }
+            }
+        }
+        agent->addToExperienceBufferInBulk(steps);
+        agent->step();
+    }
+    for (int i = 0; i < nEnv; i++)
+    {
+        envs[i].env->reset();
+        envs[i].done = false;
+        envs[i].steps = 0;
+    }
+
+    if (episode % print_every == 0)
+    {
+        std::string path;
+        cout << mean_score << "\n";
+        path = "Checkpoints/" + std::to_string(episode);
+        agent->checkpoint(path);
+    }
    }
 ```
