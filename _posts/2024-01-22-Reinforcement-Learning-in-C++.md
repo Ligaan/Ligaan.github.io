@@ -692,6 +692,7 @@ agent->loadCheckpoint(_path);
 And this is how to use the agent after training
 
 ```C++
+agent->q_network->eval();
 Float_State state = env->StateToFloat_State(env->squizzForNetwork(env->currentState));
 torch::Tensor s_tensor = torch::from_blob((float*)(state.state.data()), agent->state_size).unsqueeze(0);
 
