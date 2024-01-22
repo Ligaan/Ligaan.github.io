@@ -188,3 +188,17 @@ int reset_env() {
 }
 
 ```
+
+As for using the model, you could do something like this after training.
+```C++
+l_epsilon = 0.0f;
+for(int t = 0; t<max_steps && !done; t++)
+      {
+        action = epsilon_greedy_policy(state);
+        step_values = env_step(state,action);
+        q_table[state][action] = q_table[state][action] + lr_rate * (step_values.reward + gamma * q_table_max_row_reward(step_values.state) -  q_table[state][action]);
+        done = step_values.done;
+        state = step_values.state;
+        t++;
+      }     
+```
