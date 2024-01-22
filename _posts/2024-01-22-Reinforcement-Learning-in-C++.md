@@ -683,3 +683,20 @@ Step_return step_return;
     }
    }
 ```
+And this is an example of how you could load a checkpoint for the DQN agent
+```C++
+std::string _path = "200";
+_path = "Checkpoints/" + _path;
+agent->loadCheckpoint(_path);
+```
+And this is how to use the agent after training
+
+```C++
+Float_State state = env->StateToFloat_State(env->squizzForNetwork(env->currentState));
+torch::Tensor s_tensor = torch::from_blob((float*)(state.state.data()), agent->state_size).unsqueeze(0);
+
+torch::Tensor action_values = agent->q_network->forward(s_tensor);
+action = static_cast<Action>(torch::argmax(action_values).item().toInt() % agent->action_size);
+dt = 0.005f;
+env->step(0.005f, action);
+```
