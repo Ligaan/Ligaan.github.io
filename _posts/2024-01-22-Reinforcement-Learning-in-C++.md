@@ -14,7 +14,7 @@ After reading this blog and the associated materials you should be able to succe
 
 
 We will start by initializing the values for the Deep Learning algorithm. The environment that we will be using will be a grid of 4X4.
-```
+```C++
 float l_epsilon = 0.9f; // this means that there is a 90% change to select a random action
 const float max_epsilon = 1.0f; // epsilon initial value
 const float min_epsilon = 0.05f; // epsilon final value (5% chance for a random action)
@@ -36,7 +36,7 @@ float q_table[observation_space][action_space] = {0.0f};
 ```
 Then we will create some functions to help us during the training.
 
-```
+```C++
 struct step_return_values
 {
 public:
@@ -94,7 +94,7 @@ int epsilon_greedy_policy(int state)
 
 This is implementation of Deep-Learning works by reseting the environment to its initial state at the start of each episode.
 During the episode, in each step you will get an action based on the current state of the environmen from the greedy policy. Then you update the environment based on the action that you get and lastly you update the Q-table based on the previouse state, current state, the action that you took and the reward that you get from the environmen for that action.
-```
+```C++
 
 void main()
 {
@@ -126,7 +126,7 @@ return 0;
 
 Lastly this is how the reward function and the environment will look.
 
-```
+```C++
 
 step_return_values env_step(int state,int action) {
     int l_state=0;
