@@ -29,7 +29,7 @@ We will start by initializing the values for the Deep Learning algorithm. The en
     int RandomInt(int min, int max) { return min + (rand() % static_cast<int>(max - min + 1)); }
 
     int target = 0;
-    int tiles[4][4] = {{3, 0, 0, 0}, {0, 1, 0, 1}, {0, 0, 0, 1}, {1, 0, 0, 2}};
+    int tiles[4][4] = { {3, 0, 0, 0}, {0, 1, 0, 1}, {0, 0, 0, 1}, {1, 0, 0, 2} };
     const int observation_space=16, action_space=4;
 
     float q_table[observation_space][action_space] = {0.0f};
