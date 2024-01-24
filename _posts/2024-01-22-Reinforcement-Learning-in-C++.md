@@ -452,34 +452,7 @@ And lastly the DQN algorithm class
 class DQN
 {
 public:
-    DQN(int state_size, int action_size, int seed);
-    DQN(int state_size, int action_size);
-    DQN(){};
-    void step();  //(State state, Action action, float reward, State next_state, bool done);
-    void addToExperienceBuffer(Full_Float_Step_Return value);
-    void addToExperienceBufferInBulk(std::vector<Full_Float_Step_Return>& values);
-    int act(Float_State state, float epsilon);
-    void learn(Tensor_step_return experiences);
-    void update_fixed_network(QNetwork& local_model, QNetwork& target_model);
-    void checkpoint(std::string filepath);
-    void loadCheckpoint(std::string filepath);
-    void resetLearning();
-
-    int state_size, action_size, seed;
-
-    QNetwork q_network, fixed_network;
-    torch::optim::Adam* optimizer;
-
-    ReplayBuffer buffer;
-    int timestep = 0;
-
-    int whenToPrint = 1000;
-    int currentStep = 0;
-};
-```
-```C++
-
-DQN::DQN(int state_size, int action_size, int seed)
+    DQN(int state_size, int action_size, int seed)
 {
     this->state_size = state_size;
     this->action_size = action_size;
@@ -490,11 +463,13 @@ DQN::DQN(int state_size, int action_size, int seed)
     auto adamOptions = torch::optim::AdamOptions(0.0001);
     optimizer = new torch::optim::Adam(q_network->parameters(), adamOptions);
     buffer = ReplayBuffer(state_size, action_size, BUFFER_SIZE, BATCH_SIZE, seed);
-}
+};
 
-DQN::DQN(int state_size, int action_size) { DQN(state_size, action_size, 0); }
+DQN(int state_size, int action_size) { DQN(state_size, action_size, 0); };
 
-void DQN::step()
+DQN(){};
+
+void step()
 {
     if (timestep >= UPDATE_EVERY)
     {
@@ -506,21 +481,21 @@ void DQN::step()
         }
         timestep = timestep % UPDATE_EVERY;
     }
-}
+};
 
-void DQN::addToExperienceBuffer(Full_Float_Step_Return value)
+void addToExperienceBuffer(Full_Float_Step_Return value)
 {
     buffer.add(value);  //(state, action, reward, next_state, done);
     timestep++;
-}
+};
 
-void DQN::addToExperienceBufferInBulk(std::vector<Full_Float_Step_Return>& values)
+void addToExperienceBufferInBulk(std::vector<Full_Float_Step_Return>& values)
 {
     timestep += values.size();
     buffer.addBulk(values);
-}
+};
 
-int DQN::act(Float_State state, float epsilon)
+int act(Float_State state, float epsilon)
 {
     torch::NoGradGuard no_grad;
 
@@ -543,9 +518,9 @@ int DQN::act(Float_State state, float epsilon)
     }
     // std::cout << "\n" << action << "\n";
     return action;
-}
+};
 
-void DQN::learn(Tensor_step_return experiences)
+void learn(Tensor_step_return experiences)
 {
     // this->q_network->train();
 
@@ -572,9 +547,9 @@ void DQN::learn(Tensor_step_return experiences)
     update_fixed_network(q_network, fixed_network);
 
     // this->q_network->eval();
-}
+};
 
-void DQN::update_fixed_network(QNetwork& local_model, QNetwork& target_model)
+void update_fixed_network(QNetwork& local_model, QNetwork& target_model)
 {
     torch::NoGradGuard no_grad;
 
@@ -583,28 +558,40 @@ void DQN::update_fixed_network(QNetwork& local_model, QNetwork& target_model)
         fixed_network->parameters()[i].data().copy_(TAU * q_network->parameters()[i].data() +
                                                     (1.0f - TAU) * fixed_network->parameters()[i].data());
     }
-}
+};
 
-void DQN::checkpoint(std::string filepath)
+void checkpoint(std::string filepath)
 {
     torch::save(q_network, (filepath + "_network.pt").c_str());
     torch::save(*optimizer, (filepath + "_optimizer.pt").c_str());
-}
+};
 
-void DQN::loadCheckpoint(std::string filepath)
+void loadCheckpoint(std::string filepath)
 {
     torch::load(q_network, (filepath + "_network.pt").c_str());
     torch::load(*optimizer, (filepath + "_optimizer.pt").c_str());
-}
+};
 
-void DQN::resetLearning()
+void resetLearning()
 {
     q_network->resetNetwork();
     fixed_network->resetNetwork();
     delete optimizer;
     auto adamOptions = torch::optim::AdamOptions(0.0001);
     optimizer = new torch::optim::Adam(q_network->parameters(), adamOptions);
-}
+};
+
+    int state_size, action_size, seed;
+
+    QNetwork q_network, fixed_network;
+    torch::optim::Adam* optimizer;
+
+    ReplayBuffer buffer;
+    int timestep = 0;
+
+    int whenToPrint = 1000;
+    int currentStep = 0;
+};
 ```
 
 Now lets see how we will used everything above
