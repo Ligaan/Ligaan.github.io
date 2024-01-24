@@ -752,6 +752,7 @@ The results would be something like this.
 After training for some time you should get a model that behaves like this.
 The results would be something like this.
 ![video](/Images/TrainedModel.gif)
+![video](/Images/TrainedModel2.gif)
 
 And this is an example of how you could load a checkpoint for the DQN agent
 ```C++
