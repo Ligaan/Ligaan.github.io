@@ -250,7 +250,7 @@ For the start lets get starting with the DQN algorithm first, but before that yo
 
 Now that we have everything that we need lest jump into it
 
-We'll start with the network first.
+We'll start with the headers that we will need first
 ```C++
 #pragma once
 #include <torch/nn.h>
@@ -266,7 +266,9 @@ We'll start with the network first.
 #include <iostream>
 #include <iterator>
 #include <random>
-
+```
+Then we will create the structs that will we will use for storing the state and the step return information when working with the DQN algorithm
+```cpp
 struct Float_State
 {
     std::vector<float> state;
@@ -295,50 +297,47 @@ struct Tensor_step_return
     torch::Tensor rewards;
     torch::Tensor dones;
 };
-
+```
+Now that we have the structs that we will need ready, lets start with the Network class first
+```cpp
 class QNetworkImpl : public torch::nn::Module
 {
 public:
-    QNetworkImpl(int state_size, int action_size, int seed);
-    QNetworkImpl(int state_size, int action_size);
-    QNetworkImpl(){};
-    torch::Tensor forward(torch::Tensor x);
-    void resetNetwork();
-
-    torch::nn::Linear fc1{nullptr}, fc2{nullptr}, fc3{nullptr};
-};
-
-TORCH_MODULE(QNetwork);
-```
-```C++
-QNetworkImpl::QNetworkImpl(int state_size, int action_size, int seed)
-{
+    QNetworkImpl(int state_size, int action_size, int seed){
+    //fc1 tp fc2 are hidden layers for the network
     torch::manual_seed(seed);
     fc1 = register_module("fc1", torch::nn::Linear(state_size, 128));
     fc2 = register_module("fc2", torch::nn::Linear(128, 128));
     fc3 = register_module("fc3", torch::nn::Linear(128, action_size));
-}
+};
 
-QNetworkImpl::QNetworkImpl(int state_size, int action_size) { QNetwork(state_size, action_size, 0); }
+    QNetworkImpl(int state_size, int action_size){ QNetwork(state_size, action_size, 0); };
 
-torch::Tensor QNetworkImpl::forward(torch::Tensor x)
-{
+    QNetworkImpl(){};
+
+    // This function will return us the values for each action that the network computem with the given state
+    torch::Tensor forward(torch::Tensor x){
     x = fc1(x);
     x = torch::relu(x);
     x = fc2(x);
     x = torch::relu(x);
     x = fc3(x);
     return x;
-}
+};
 
-void QNetworkImpl::resetNetwork()
-{
+// This resets the network layers to their initial values
+    void resetNetwork(){
     for (auto& layer : this->children())
     {
         layer.reset();
     }
-}
+};
+    torch::nn::Linear fc1{nullptr}, fc2{nullptr}, fc3{nullptr};
+};
+
+TORCH_MODULE(QNetwork);
 ```
+
 Then we will create the memory buffer class which will be responsible for sampling previouse random states of the environment.
 
 ```C++
