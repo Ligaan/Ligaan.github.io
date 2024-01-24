@@ -660,6 +660,9 @@ And now finnaly the training
        }
    }
 ```
+The results would be something like this.
+![video](/Images/BeforeOptimization.gif)
+
 Now if we want to speed up the training, we could train with multiple sets of data at once, like this.
 
 ```C++
@@ -743,6 +746,13 @@ Step_return step_return;
     }
    }
 ```
+The results would be something like this.
+![video](/Images/TrainingOptimization.gif)
+
+After training for some time you should get a model that behaves like this.
+The results would be something like this.
+![video](/Images/TrainedModel.gif)
+
 And this is an example of how you could load a checkpoint for the DQN agent
 ```C++
 std::string _path = "200";
