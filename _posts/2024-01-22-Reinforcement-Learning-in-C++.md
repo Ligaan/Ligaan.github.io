@@ -6,7 +6,7 @@ As the name suggest this blog is about showcasing and explaining how you could u
 
 ## What should you expect to learn from this blog?
 
-After reading this blog and the associated materials you should be able to succesfully implement some form of Deep-Learning or DQN algorithms for C++, be able to set up pytorch for visual studio C++ projects and also be able to create your own environment or use some built by others.
+After reading this blog and the associated materials you should be able to succesfully implement some form of Deep-Learning or DQN algorithms for C++ and be able to set up pytorch for visual studio C++ projects.
 
 ## Deep-Learning with the Frozen Lake environment
 
