@@ -240,7 +240,7 @@ for(int t = 0; t<max_steps && !done; t++)
 
 The result should be something like this:
 
-![video](../_posts/Demo.gif)
+![video](../Images/Demo.gif)
 
 ## DQN with Moon Lander and Racing Track
 
