@@ -38,7 +38,7 @@ Now it is time to start defining the training environment. We will start by crea
 - 2 is where the agent needs to go
 - 3 is where the player starts
 ```cpp
-    int target = 0;
+    int target = 15;
     int tiles[4][4] = { {3, 0, 0, 0}, {0, 1, 0, 1}, {0, 0, 0, 1}, {1, 0, 0, 2} };
 ```
 Now we need to create the Q-Table and set the actiona and observation spaces. The observation space in general is what the agent sees while training and the action space is what action he can performe. As for the Q-Table, the Q-Table represents a grid like space where we map the value of taking any possible action in a certain state of the environment, like for example we could be in our initial position from where we can performe 4 movement: go up, go down, go left and go right. The algorithm will fill the Q-Table with values based on how good an action is in a certain state.
@@ -115,40 +115,13 @@ int epsilon_greedy_policy(int state)
 ```
 
 
-This is implementation of Deep-Learning works by reseting the environment to its initial state at the start of each episode.
-During the episode, in each step you will get an action based on the current state of the environmen from the greedy policy. Then you update the environment based on the action that you get and lastly you update the Q-table based on the previouse state, current state, the action that you took and the reward that you get from the environmen for that action.
-
-```C++
-void main()
-{
-    // Move player
-    int episode = 0;
-    int t = max_steps;
-    bool done = false;
-    int state = 0;
-    int action = 0; 
-    for(int episode = 0; episode < total_episodes; episode++){
-      for(int t = 0; t<max_steps && !done; t++)
-      {
-        action = epsilon_greedy_policy(state);
-        step_values = env_step(state,action);
-        q_table[state][action] = q_table[state][action] + lr_rate * (step_values.reward + gamma * q_table_max_row_reward(step_values.state) -  q_table[state][action]);
-        done = step_values.done;
-        state = step_values.state;
-        t++;
-      }
-      l_epsilon = min_epsilon + (max_epsilon - min_epsilon) * pow(M_E, static_cast<float>(episode) * -decay_rate);
-      state = reset_env();
-      episode++;
-      done = false;
-      t = 0;
-}
-return 0;
-}
-```
-
-Lastly this is how the reward function and the environment will look.
-
+Now lets see how the update function and the reward system for this specific environment will look.
+The actioned are as followed:
+- 0 move right
+- 1 move up
+- 2 move left
+- 3 move down
+As for the reward, the agent will get a positive reward if it finishes the map and if it hits a trap the simulation will be ended. The reset function will reset the environment to its initial state.
 ```C++
 step_return_values env_step(int state,int action) {
     int l_state=0;
@@ -210,6 +183,48 @@ int reset_env() {
 }
 ```
 
+Now lets jump to putting together the Deep-Learning algorithm.
+
+```C++
+void main()
+{
+    // Here we will create the values that we will need
+    int episode = 0;
+    int t = max_steps;
+    bool done = false;
+    int state = 0;
+    int action = 0;
+
+    // Here is where the training begins
+    for(int episode = 0; episode <= total_episodes; episode++){
+      for(int t = 0; t<max_steps && !done; t++)
+      {
+        // We select an action
+        action = epsilon_greedy_policy(state);
+
+        // Then we take that action in our current state
+        step_values = env_step(state,action);
+
+        // And finally we evaluate the action that we took in the previouse state
+        q_table[state][action] = q_table[state][action] + lr_rate * (step_values.reward + gamma * q_table_max_row_reward(step_values.state) -  q_table[state][action]);
+
+        done = step_values.done;
+        // Setting the environment to its current state after taking the action is an easy to miss step so be carefull
+        state = step_values.state;
+        t++;
+      }
+        // Here we calculate the epsilon based on the current episode
+      l_epsilon = min_epsilon + (max_epsilon - min_epsilon) * pow(M_E, static_cast<float>(episode) * -decay_rate);
+
+        //Then we reset the environment
+      state = reset_env();
+      done = false;
+      t = 0;
+}
+return 0;
+}
+```
+
 As for using the model, you could do something like this after training.
 ```C++
 l_epsilon = 0.0f;
@@ -222,6 +237,8 @@ for(int t = 0; t<max_steps && !done; t++)
         t++;
       }     
 ```
+
+The result should be something like this:
 
 ## DQN with Moon Lander and Racing Track
 
