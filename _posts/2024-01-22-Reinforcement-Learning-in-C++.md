@@ -240,6 +240,8 @@ for(int t = 0; t<max_steps && !done; t++)
 
 The result should be something like this:
 
+![video](Week_3_demo.mp4)
+
 ## DQN with Moon Lander and Racing Track
 
 Now that we are done with our first RL algorithm you might have already seen the drawbacks of Deep-Learning such as the fact that you would need to create a Q-table based on all the states that an environemnt could happen to be in and the actions that could be taken in that mentioned state. This could get really hard or close to impossible to represent with an environment that is in a continuous state such as a racing game for example. This is where DQN comes into place by using a network to approximate the value of taking an action a in a state s.
