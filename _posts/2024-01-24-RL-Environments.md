@@ -2,9 +2,6 @@ Now that we are done with the DQN its time to discuse a bit about environments.
 
 When training an agent in an environment with a RL algorithms one of the key points in whether or not it learns how to solve environment is the reward system. A good reward system could stimulate the agent to learn better and faster while a bad reward system could make the agent fail to learn something usefull. This shows some of the [gym environments](https://github.com/openai/gym/tree/master/gym/envs) whic might be a good space to look for examples.
 
-The environment that I will present also contains tools for building new tracks due to the never ending posibility for the agent to overspecialize on one specific environment and from there on be incapable of solving other environments.
-
-
 Lest start by creating some structs that we will use later
 
 This will store all the information that you will need for loading/saving a track
@@ -73,34 +70,54 @@ struct Step_return
 Now that we have those it is time to build the track.
 We will start with a header that looks like this.
 ```
+struct Float_State;
+struct Float_Step_Return;
+struct Full_Float_Step_Return;
 class Racing_Track
 {
 public:
     
     Racing_Track();
+
+    //This will give us the camera space size
     Racing_Track(glm::vec2 windowSize);
 
+    // Some functions for conversion into data accessible by the DQN class
     Float_State StateToFloat_State(State state);
     Float_Step_Return StepReturnToFloatStepReturn(Step_return step_return);
     Full_Float_Step_Return StepReturnToFullFLoatStepReturn(Step_return step_return);
 
+    // Resets the environment
     void reset();
     void updateEnvironment(float dt, Action a);
+
+    // Check if the agent went past the checkpoint in between the current state and the previous state
     bool hitCheckpoint(int checkpoint, glm::vec2 prev_pos, glm::vec2 current_pos);
-    State squizzForNetwork(State state);
+
     Step_return step(float dt, Action action);
+
+    // This function will be used to determin if a point is on the left or right side of a line
     float edgeFunction(glm::vec2 a, glm::vec2 b, glm::vec2 p);
+
+    // This will give us the triangle in which the a point is contained
     Triangle insideWhichTraingle(glm::vec2 point);
+
+    // This checks to see if a point is withing a triangle
     bool insideATriangle(glm::vec2 A,glm::vec2 B,glm::vec2 C,glm::vec2 point);
+
     bool isOnTrack();
+
+    // This is for the raycasting that we will do
     glm::vec3 lineIntersect(glm::vec2 a, glm::vec2 b, glm::vec2 c, glm::vec2 d);
     glm::vec2 trackRaycast(glm::vec2 from,glm::vec2 to);
 
+    // This is for building the track, since for most of the time we want to train the agent with multiple environments in order to avoid the scenarion where it overspecialize on a specific environment
     void addTrackPoint(glm::vec2 point);
     void removeLastTrackPoint();
     void addCheckpoint(glm::vec4 checkpoint);
     void removeLastCheckpoint();
 
+    // This will help us save and load tracks
     void serializeTrack(std::string path);
     void deserializeTrack(std::string path);
 
@@ -110,7 +127,6 @@ public:
     glm::vec2 gameWindowSize;
 
     //building variables
-    bool seeTrack =true;
     float lineAngle = 0.0f;
     float checkpointSize = 10.0f;
     int mouseWheel = 0;
@@ -125,7 +141,6 @@ public:
     bool done = false;
     int insideTriangleFirstCorner = 0;
 
-    //glm::vec2 line_direction=glm::vec2(0.0f,1.0f);
     glm::vec2 l0 = glm::vec2(-1.0f, 0.0f);
     glm::vec2 l1 = glm::vec2(-0.5f, 0.5f);
     glm::vec2 l2 = glm::vec2(0.0f, 1.0f);
@@ -136,6 +151,7 @@ public:
 
 
     glm::vec2 size = glm::vec2(5.0f, 10.0f);
+
     //Shouldn't be changed durring the Running or Training mode
     float forwardForce = 100.0f;
     float breakForce = 100.0f;
@@ -161,12 +177,6 @@ public:
 
     State currentState;
     Track track;
-
-    EnvironmentState envState = EnvironmentState::None;
-    BuildingMods buildingMod = BuildingMods::Null;
-    Player player = Player::User;
-
-    bool runDebug = true;
 };
 ```
 
