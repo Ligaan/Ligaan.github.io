@@ -240,7 +240,7 @@ for(int t = 0; t<max_steps && !done; t++)
 
 The result should be something like this:
 
-![video](../Images/Demo.gif)
+![video](Images/Demo.gif)
 
 ## DQN with Moon Lander and Racing Track
 
@@ -298,6 +298,18 @@ struct Tensor_step_return
     torch::Tensor dones;
 };
 ```
+And some values that we will be using later
+```cpp
+unsigned seed;
+const int BUFFER_SIZE = int(2e5);
+const int BATCH_SIZE = 64;
+const float GAMMA = 0.99f;
+float TAU = 1e-3;
+float LR = 5e-4;
+int UPDATE_EVERY = 32;
+
+```
+
 Now that we have the structs that we will need ready, lets start with the Network class first
 ```cpp
 class QNetworkImpl : public torch::nn::Module
@@ -344,51 +356,31 @@ Then we will create the memory buffer class which will be responsible for sampli
 class ReplayBuffer
 {
 public:
-    ReplayBuffer(int state_size, int action_size, int buffer_size, int batch_size, int seed);
-    ReplayBuffer(int action_size, int buffer_size, int batch_size);
-    ReplayBuffer(){};
-
-    void add(Full_Float_Step_Return experience);  //(State state, Action action, float reward, State next_state, bool done);
-    void addBulk(std::vector<Full_Float_Step_Return>& experiences);
-    Tensor_step_return sample();
-
-    int state_size;
-    int action_size;
-    int buffer_size;
-    int batch_size;
-
-    std::vector<Full_Float_Step_Return> experiences;
-    int seed;
-
-    std::vector<float> actions;
-    std::vector<float> rewards;
-    std::vector<float> dones;
-};
-```
-```C++
-ReplayBuffer::ReplayBuffer(int state_size, int action_size, int buffer_size, int batch_size, int seed)
+   ReplayBuffer(int state_size, int action_size, int buffer_size, int batch_size, int seed)
 {
     this->state_size = state_size;
     this->action_size = action_size;
     this->buffer_size = buffer_size;
     this->batch_size = batch_size;
     this->seed = seed;
-}
+};
 
-ReplayBuffer::ReplayBuffer(int action_size, int buffer_size, int batch_size)
+ReplayBuffer(int action_size, int buffer_size, int batch_size)
 {
     this->buffer_size = buffer_size;
     this->batch_size = batch_size;
     this->seed = seed;
-}
+};
 
-void ReplayBuffer::add(Full_Float_Step_Return experience)
+ReplayBuffer(){};
+
+void add(Full_Float_Step_Return experience)
 {
     experiences.push_back(experience);
     if (experiences.size() > buffer_size) experiences.erase(experiences.begin());
-}
+};
 
-void ReplayBuffer::addBulk(std::vector<Full_Float_Step_Return>& experiences)
+void addBulk(std::vector<Full_Float_Step_Return>& experiences)
 {
     this->experiences.insert(this->experiences.end(), std::make_move_iterator(experiences.begin()),
                              std::make_move_iterator(experiences.end()));
@@ -397,9 +389,10 @@ void ReplayBuffer::addBulk(std::vector<Full_Float_Step_Return>& experiences)
         this->experiences.erase(this->experiences.begin(),
                                 this->experiences.begin() + (this->experiences.size() - buffer_size));
     }
-}
+};
 
-Tensor_step_return ReplayBuffer::sample()
+// This is the most important function from this class, which will sample us batch_size random experiences in a random order, and convert them to tensors (the general container used in pytorch) so that the network could read them and use them for learning 
+Tensor_step_return sample()
 {
     Tensor_step_return tensor;
     std::vector<Full_Float_Step_Return> batch;
@@ -439,7 +432,20 @@ Tensor_step_return ReplayBuffer::sample()
     tensor.rewards = torch::from_blob((float*)(rewards.data()), rewards.size()).unsqueeze(1);
     tensor.dones = torch::from_blob((float*)(dones.data()), dones.size()).unsqueeze(1);
     return tensor;
-}
+};
+
+    int state_size;
+    int action_size;
+    int buffer_size;
+    int batch_size;
+
+    std::vector<Full_Float_Step_Return> experiences;
+    int seed;
+
+    std::vector<float> actions;
+    std::vector<float> rewards;
+    std::vector<float> dones;
+};
 ```
 And lastly the DQN algorithm class
 ```C++
@@ -472,13 +478,6 @@ public:
 };
 ```
 ```C++
-unsigned seed;
-const int BUFFER_SIZE = int(2e5);  // 1e5
-const int BATCH_SIZE = /*128*/ 64;
-const float GAMMA = 0.99f;
-float TAU = 1e-3;
-float LR = 5e-4;
-int UPDATE_EVERY = 32; /*16;*/
 
 DQN::DQN(int state_size, int action_size, int seed)
 {
