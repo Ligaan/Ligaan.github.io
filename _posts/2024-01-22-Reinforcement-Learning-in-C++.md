@@ -661,6 +661,7 @@ And now finnaly the training
    }
 ```
 The results would be something like this.
+
 ![video](/Images/BeforeOptimization.gif)
 
 Now if we want to speed up the training, we could train with multiple sets of data at once, like this.
@@ -747,10 +748,12 @@ Step_return step_return;
    }
 ```
 The results would be something like this.
+
 ![video](/Images/TrainingOptimization.gif)
 
 After training for some time you should get a model that behaves like this.
 The results would be something like this.
+
 ![video](/Images/TrainedModel.gif)
 ![video](/Images/TrainedModel2.gif)
 
