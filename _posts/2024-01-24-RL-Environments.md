@@ -1,9 +1,13 @@
 Now that we are done with the DQN its time to discuse a bit about environments.
 
-When training agent one in RL one of the most important if not the most important part of the training is the reward system. A good reward system could stimulate the agent to learn better and faster while a bad reward system could make the agent fail to learn something usefull. This shows some of the [gym environments](https://github.com/openai/gym/tree/master/gym/envs) whic might be a good space to look for examples.
+When training an agent in an environment with a RL algorithms one of the key points in whether or not it learns how to solve environment is the reward system. A good reward system could stimulate the agent to learn better and faster while a bad reward system could make the agent fail to learn something usefull. This shows some of the [gym environments](https://github.com/openai/gym/tree/master/gym/envs) whic might be a good space to look for examples.
 
-And this is the track environment that I created
+The environment that I will present also contains tools for building new tracks due to the never ending posibility for the agent to overspecialize on one specific environment and from there on be incapable of solving other environments.
 
+
+Lest start by creating some structs that we will use later
+
+This will store all the information that you will need for loading/saving a track
 ```C++
 struct Track 
 {
@@ -12,7 +16,15 @@ public:
     std::vector<glm::vec4> checkpoints;
     glm::vec4 playerStartValues = glm::vec4(0.0f);
 };
-
+```
+This is our observation space, the values are as followed:
+- l0 is a sensor on the left side of the car that tells it how far it is from a wall
+- l1 is a sensor on the front left corner of the car that tells it how far it is from a wall
+- l2 is a sensor on the front side of the car that tells it how far it is from a wall
+- l3 is a sensor on the front right side of the car that tells it how far it is from a wall
+- l4 is a sensor on the right side of the car that tells it how far it is from a wall
+- velocity is the current velocity of the car
+```cpp
 struct State
 {
     float l0;
@@ -22,13 +34,17 @@ struct State
     float l4;
     float velocity;
 };
-
+```
+This struct will be used when we check if the car is on the track
+```cpp
 struct Triangle
 {
     glm::vec2 A = glm::vec2(0.0f), B=glm::vec2(0.0f), C=glm::vec2(0.0f);
     int indexes[3] = {-1,-1,-1};
 };
-
+```
+This is the action space of the environment
+```cpp
 enum Action
 {
     Nothing,
@@ -41,7 +57,9 @@ enum Action
     BackwardLeft,
     BackwardRight,*/
 };
-
+```
+As in the previous example this is the step return struct
+```cpp
 struct Step_return
 {
     State state;
@@ -51,11 +69,10 @@ struct Step_return
     bool terminated;
     bool truncated;
 };
-
-struct Float_State;
-struct Float_Step_Return;
-struct Full_Float_Step_Return;
-
+```
+Now that we have those it is time to build the track.
+We will start with a header that looks like this.
+```
 class Racing_Track
 {
 public:
