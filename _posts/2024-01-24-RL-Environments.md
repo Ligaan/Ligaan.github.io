@@ -69,7 +69,7 @@ struct Step_return
 ```
 Now that we have those it is time to build the track.
 We will start with a header that looks like this.
-```
+```cpp
 struct Float_State;
 struct Float_Step_Return;
 struct Full_Float_Step_Return;
@@ -179,24 +179,377 @@ public:
     Track track;
 };
 ```
+Now that we have the class header I'll start by going through the auxiliar functions first.
 
-```C++
-using namespace glm;
+Those are for converting the state and step return struct data into something that the DQN could use
+```cpp
+Float_State Racing_Track::StateToFloat_State(State state)
+{
+    Float_State new_state;
+    new_state.state.push_back(state.l0);
+    new_state.state.push_back(state.l1);
+    new_state.state.push_back(state.l2);
+    new_state.state.push_back(state.l3);
+    new_state.state.push_back(state.l4);
+    new_state.state.push_back(state.velocity);
+    return new_state;
+}
 
+Float_Step_Return Racing_Track::StepReturnToFloatStepReturn(Step_return step_return)
+{
+    Float_Step_Return floatStepReturn;
+    floatStepReturn.state = StateToFloat_State(step_return.state);
+    floatStepReturn.next_state = StateToFloat_State(step_return.next_state);
+    floatStepReturn.reward = step_return.reward;
+    floatStepReturn.action = static_cast<float>(step_return.action);
+    floatStepReturn.terminated = static_cast<float>(step_return.terminated);
+    return floatStepReturn;
+}
+
+Full_Float_Step_Return Racing_Track::StepReturnToFullFLoatStepReturn(Step_return step_return)
+{
+    Full_Float_Step_Return floatStepReturn;
+    // state
+    floatStepReturn.data.push_back(step_return.state.l0);
+    floatStepReturn.data.push_back(step_return.state.l1);
+    floatStepReturn.data.push_back(step_return.state.l2);
+    floatStepReturn.data.push_back(step_return.state.l3);
+    floatStepReturn.data.push_back(step_return.state.l4);
+    floatStepReturn.data.push_back(step_return.state.velocity);
+    // new state
+    floatStepReturn.data.push_back(step_return.next_state.l0);
+    floatStepReturn.data.push_back(step_return.next_state.l1);
+    floatStepReturn.data.push_back(step_return.next_state.l2);
+    floatStepReturn.data.push_back(step_return.next_state.l3);
+    floatStepReturn.data.push_back(step_return.next_state.l4);
+    floatStepReturn.data.push_back(step_return.next_state.velocity);
+    // reward
+    floatStepReturn.data.push_back(step_return.reward);
+    // action
+    floatStepReturn.data.push_back(static_cast<float>(step_return.action));
+    // terminated
+    floatStepReturn.data.push_back(static_cast<float>(step_return.terminated));
+    return floatStepReturn;
+}
+
+```
+
+
+The track building functions
+```cpp
+void Racing_Track::removeLastTrackPoint()
+{
+    if (!track.trackBorder.empty()) track.trackBorder.pop_back();
+}
+
+void Racing_Track::addCheckpoint(glm::vec4 checkpoint) { track.checkpoints.push_back(checkpoint); }
+
+void Racing_Track::removeLastCheckpoint()
+{
+    if (!track.checkpoints.empty()) track.checkpoints.pop_back();
+}
+
+void Racing_Track::addTrackPoint(glm::vec2 point) { track.trackBorder.push_back(point); }
+```
+This functions are for loading and saving the tracks that we build
+```cpp
+void Racing_Track::serializeTrack(std::string path)
+{
+    std::string data = " ";
+    for (auto& point : track.trackBorder)
+    {
+        data += std::to_string(point.x) + " " + std::to_string(point.y) + " ";
+    }
+    bee::Engine.FileIO().WriteTextFile(bee::FileIO::Directory::Asset, "Tracks/" + path + "_track.txt", data);
+
+    data = " ";
+    for (auto& point : track.checkpoints)
+    {
+        data += std::to_string(point.x) + " " + std::to_string(point.y) + " " + std::to_string(point.z) + " " +
+                std::to_string(point.w) + " ";
+    }
+    data += std::to_string(track.playerStartValues.x) + " " + std::to_string(track.playerStartValues.y) + " " +
+            std::to_string(track.playerStartValues.z) + " " + std::to_string(track.playerStartValues.w) + " ";
+    bee::Engine.FileIO().WriteTextFile(bee::FileIO::Directory::Asset, "Tracks/" + path + "_checkpoints.txt", data);
+}
+
+void Racing_Track::deserializeTrack(std::string path)
+{
+    track.trackBorder.clear();
+    track.checkpoints.clear();
+
+    std::string string_data;
+    std::string value;
+    std::vector<float> float_data;
+    float x, y, z, w;
+    std::string l_path = "Tracks/" + path + "_track.txt";
+    string_data = bee::Engine.FileIO().ReadTextFile(bee::FileIO::Directory::Asset, l_path);
+    while (string_data.size() > 1)
+    {
+        size_t initialPos = string_data.find(" ");
+        size_t finalPos = string_data.find(" ", 1);
+        value = string_data.substr(initialPos, finalPos - initialPos);
+        x = std::stof(value);
+        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
+
+        initialPos = string_data.find(" ");
+        finalPos = string_data.find(" ", 1);
+        value = string_data.substr(initialPos, finalPos - initialPos);
+        y = std::stof(value);
+        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
+        track.trackBorder.push_back(glm::vec2(x, y));
+    }
+
+    float_data.clear();
+
+    l_path = "Tracks/" + path + "_checkpoints.txt";
+    string_data = bee::Engine.FileIO().ReadTextFile(bee::FileIO::Directory::Asset, l_path);
+    while (string_data.size() > 1)
+    {
+        size_t initialPos = string_data.find(" ");
+        size_t finalPos = string_data.find(" ", 1);
+        value = string_data.substr(initialPos, finalPos - initialPos);
+        x = std::stof(value);
+        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
+
+        initialPos = string_data.find(" ");
+        finalPos = string_data.find(" ", 1);
+        value = string_data.substr(initialPos, finalPos - initialPos);
+        y = std::stof(value);
+        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
+
+        initialPos = string_data.find(" ");
+        finalPos = string_data.find(" ", 1);
+        value = string_data.substr(initialPos, finalPos - initialPos);
+        z = std::stof(value);
+        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
+
+        initialPos = string_data.find(" ");
+        finalPos = string_data.find(" ", 1);
+        value = string_data.substr(initialPos, finalPos - initialPos);
+        w = std::stof(value);
+        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
+
+        track.checkpoints.push_back(glm::vec4(x, y, z, w));
+    }
+    if (track.checkpoints.size() >= 1)
+    {
+        track.playerStartValues = track.checkpoints[track.checkpoints.size() - 1];
+        track.checkpoints.pop_back();
+
+        carRotationSize.y = track.playerStartValues.w;
+        carRotationSize.x = track.playerStartValues.z;
+    }
+}
+```
+
+Those are for checking if the and where the car is on the track
+```cpp
+float Racing_Track::edgeFunction(glm::vec2 a, glm::vec2 b, glm::vec2 p)
+{
+    return (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
+}
+
+bool Racing_Track::insideATriangle(glm::vec2 A, glm::vec2 B, glm::vec2 C, glm::vec2 point)
+{
+    float m0, m1, m2;
+    m0 = edgeFunction(A, B, point);
+    m1 = edgeFunction(B, C, point);
+    m2 = edgeFunction(C, A, point);
+    if ((m0 >= 0.0f && m1 >= 0.0f && m2 >= 0.0f) || (m0 < 0.0f && m1 < 0.0f && m2 < 0.0f)) return true;
+    return false;
+}
+
+Triangle Racing_Track::insideWhichTraingle(glm::vec2 point)
+{
+    Triangle triangle;
+
+    if (track.trackBorder.size() > 2)
+    {
+        vec2 A, B, C;
+        for (int i = 0; i < track.trackBorder.size() - 2; i++)
+        {
+            A = track.trackBorder[i];
+            B = track.trackBorder[i + 1];
+            C = track.trackBorder[i + 2];
+
+            if (insideATriangle(A, B, C, point))
+            {
+                triangle.A = A;
+                triangle.B = B;
+                triangle.C = C;
+                triangle.indexes[0] = i;
+                triangle.indexes[1] = i + 1;
+                triangle.indexes[2] = i + 2;
+            }
+        }
+
+        A = track.trackBorder[track.trackBorder.size() - 1];
+        B = track.trackBorder[track.trackBorder.size() - 2];
+        C = track.trackBorder[0];
+        if (insideATriangle(A, B, C, point))
+        {
+            triangle.A = B;
+            triangle.B = A;
+            triangle.C = C;
+            triangle.indexes[0] = track.trackBorder.size() - 2;
+            triangle.indexes[1] = track.trackBorder.size() - 1;
+            triangle.indexes[2] = 0;
+        }
+
+        A = track.trackBorder[track.trackBorder.size() - 2];
+        B = track.trackBorder[1];
+        C = track.trackBorder[0];
+        if (insideATriangle(A, B, C, point))
+        {
+            triangle.A = A;
+            triangle.B = B;
+            triangle.C = C;
+            triangle.indexes[0] = track.trackBorder.size() - 2;
+            triangle.indexes[1] = 1;
+            triangle.indexes[2] = 0;
+        }
+    }
+    return triangle;
+}
+
+bool Racing_Track::isOnTrack()
+{
+    vec2 A, B, C, D;
+    A = B = C = D = position;
+    vec2 l_size;
+
+    l_size = glm::rotate(vec2(-size.x, size.y), angle);
+    A += vec2(l_size.x * track.playerStartValues.w, l_size.y * track.playerStartValues.w);
+    l_size = glm::rotate(vec2(size.x, size.y), angle);
+    B += vec2(l_size.x * track.playerStartValues.w, l_size.y * track.playerStartValues.w);
+    l_size = glm::rotate(vec2(size.x, -size.y), angle);
+    C += vec2(l_size.x * track.playerStartValues.w, l_size.y * track.playerStartValues.w);
+    l_size = glm::rotate(vec2(-size.x, -size.y), angle);
+    D += vec2(l_size.x * track.playerStartValues.w, l_size.y * track.playerStartValues.w);
+
+    Triangle triangle = insideWhichTraingle(A);
+
+    if (triangle.indexes[0] == -1) return false;
+
+    triangle = insideWhichTraingle(B);
+    if (triangle.indexes[0] == -1) return false;
+
+    triangle = insideWhichTraingle(C);
+    if (triangle.indexes[0] == -1) return false;
+
+    triangle = insideWhichTraingle(D);
+    if (triangle.indexes[0] == -1) return false;
+
+    return true;
+}
+```
+Those functions are for raycasting the lines used for the car sensors
+```cpp
+glm::vec3 Racing_Track::lineIntersect(glm::vec2 a, glm::vec2 b, glm::vec2 c, glm::vec2 d)
+{
+    vec2 r = b - a;
+    vec2 s = d - c;
+    float _d = r.x * s.y - r.y * s.x;
+    float u = ((c.x - a.x) * r.y - (c.y - a.y) * r.x) / _d;
+    float t = ((c.x - a.x) * s.y - (c.y - a.y) * s.x) / _d;
+    bool intersect = (0.0f <= u && u <= 1.0f && 0.0f <= t && t <= 1.0f);
+    r = a + t * r;
+    return vec3(r.x, r.y, static_cast<float>(intersect));
+}
+
+glm::vec2 Racing_Track::trackRaycast(glm::vec2 from, glm::vec2 to)
+{
+    vec2 intersectionPoint = vec2(0.0f);
+    float lenght = 10000, _lenght;
+    // glm::vec4 color(1.0f, 1.0f, 1.0f, 1.0f);
+    // bee::Engine.DebugRenderer().AddLine(bee::DebugCategory::General, from, to, color);
+    // color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    if (track.trackBorder.size() > 2)
+    {
+        vec2 A, C;
+        vec3 result;
+        for (int i = 0; i < track.trackBorder.size() - 2; i++)
+        {
+            A = track.trackBorder[i];
+            C = track.trackBorder[i + 2];
+            result = lineIntersect(from, to, A, C);
+            if (static_cast<bool>(result.z))
+            {
+                _lenght = glm::length(vec2(result.x, result.y) - from);
+                if (_lenght < lenght)
+                {
+                    lenght = _lenght;
+                    intersectionPoint = vec2(result.x, result.y);
+                }
+            }
+        }
+
+        A = track.trackBorder[0];
+        C = track.trackBorder[track.trackBorder.size() - 1];
+        result = lineIntersect(from, to, A, C);
+        if (static_cast<bool>(result.z))
+        {
+            _lenght = glm::length(vec2(result.x, result.y) - from);
+            if (_lenght < lenght)
+            {
+                lenght = _lenght;
+                intersectionPoint = vec2(result.x, result.y);
+            }
+        }
+
+        A = track.trackBorder[1];
+        C = track.trackBorder[track.trackBorder.size() - 2];
+        result = lineIntersect(from, to, A, C);
+        if (static_cast<bool>(result.z))
+        {
+            _lenght = glm::length(vec2(result.x, result.y) - from);
+            if (_lenght < lenght)
+            {
+                lenght = _lenght;
+                intersectionPoint = vec2(result.x, result.y);
+            }
+        }
+    }
+
+    return intersectionPoint;
+}
+```
+This function will check to see if the car when past a checkpoint
+```cpp
+bool Racing_Track::hitCheckpoint(int checkpoint, glm::vec2 prev_pos, glm::vec2 current_pos)
+{
+    glm::vec2 A, B,_size;
+    float m0, m1;
+
+    A = B = vec2(track.checkpoints[currentCheckpoint].x, track.checkpoints[currentCheckpoint].y);
+    _size = glm::rotate(l2, track.checkpoints[currentCheckpoint].z);
+    A -= track.checkpoints[currentCheckpoint].w * _size;
+    B += track.checkpoints[currentCheckpoint].w * _size;
+    m0 = edgeFunction(A, B, prev_pos);
+
+
+    m1 = edgeFunction(A, B, current_pos);
+    if ((m1 >= 0.0f && m0 <= 0.0f) || (m0 >= 0.0f && m1 <= 0.0f))
+    {
+        if (glm::length((vec2(track.checkpoints[currentCheckpoint].x, track.checkpoints[currentCheckpoint].y) -
+                         vec2(current_pos))) <= track.checkpoints[currentCheckpoint].w)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+This is how the class contructors and the reset function look
+```cpp
 Racing_Track::Racing_Track() { reset(); }
 
 Racing_Track::Racing_Track(glm::vec2 windowSize) : projectionDimensions(windowSize) { reset(); }
 
 void Racing_Track::reset()
 {
-    /*currentState.x = track.playerStartValues.x;
-    currentState.y = track.playerStartValues.y;
-    currentState.velocity = 0.0f;
-    currentState.angle = track.playerStartValues.z;
-    currentState.angularVelocity = 0.0f;
-    currentState.currentCheckPoint = 0;
-    currentState.wallHitX = 0.0f;
-    currentState.wallHitY = 0.0f;*/
     prev_shaping = 100000.0f;
     currentState.velocity = 0.0f;
     position = vec2(track.playerStartValues.x, track.playerStartValues.y);
@@ -205,11 +558,6 @@ void Racing_Track::reset()
     angularVelocity = 0;
 
     done = false;
-    // currentState.l0 = 100.0f;
-    // currentState.l1 = 100.0f;
-    // currentState.l2 = 100.0f;
-    // currentState.l3 = 100.0f;
-    // currentState.l4 = 100.0f;
 
     float _lenght;
     vec2 _position = position, l_lastOrientation, _size, A, B, C, D;
@@ -252,7 +600,9 @@ void Racing_Track::reset()
 
     insideTriangleFirstCorner = insideWhichTraingle(position).indexes[0];
 }
-
+```
+This is how the update function for the environment looks
+```cpp
 void Racing_Track::updateEnvironment(float dt, Action a)
 {
     glm::vec2 l_lastOrientation = glm::rotate(vec2(0.0f, 1.0f), angle);
@@ -359,39 +709,13 @@ void Racing_Track::updateEnvironment(float dt, Action a)
     currentState.l4 = glm::length(_position - _size);
 }
 
-bool Racing_Track::hitCheckpoint(int checkpoint, glm::vec2 prev_pos, glm::vec2 current_pos)
-{
-    glm::vec2 A, B,_size;
-    float m0, m1;
-
-    A = B = vec2(track.checkpoints[currentCheckpoint].x, track.checkpoints[currentCheckpoint].y);
-    _size = glm::rotate(l2, track.checkpoints[currentCheckpoint].z);
-    A -= track.checkpoints[currentCheckpoint].w * _size;
-    B += track.checkpoints[currentCheckpoint].w * _size;
-    m0 = edgeFunction(A, B, prev_pos);
-
-
-    m1 = edgeFunction(A, B, current_pos);
-    if ((m1 >= 0.0f && m0 <= 0.0f) || (m0 >= 0.0f && m1 <= 0.0f))
-    {
-        if (glm::length((vec2(track.checkpoints[currentCheckpoint].x, track.checkpoints[currentCheckpoint].y) -
-                         vec2(current_pos))) <= track.checkpoints[currentCheckpoint].w)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-State Racing_Track::squizzForNetwork(State state)
-{
-    return state;
-}
-
+```
+This is how the reward system looks. The approach that I went for is that the possitive rewards(checkpoints) are scarce and used to guide the agent toward the direction that it needs to follow, the shaping is used in order to help the agent improve and learn how to go faster and faster, the switch case is used to reinforce the use of certain actions, like for example I encourage the agent to use the forward action and disencourage it from using the breaks or doing nothing, the coditions for the sensors is in order to make the agent keep a certain distance from the track wall in order to avoid accidents and the minimum speed condition is an extra condition for speeding up the process of teaching it that is should always aim for speed. The final conditions are a massive positive reward for finishing the track and a massive negative reward for hitting the track walls.
+```cpp
 Step_return Racing_Track::step(float dt, Action action)
 {
     Step_return r_step;
-    r_step.state = /*squizzForNetwork(*/ currentState /*)*/;
+    r_step.state = currentState;
     lastCheckpoint = currentCheckpoint;
     updateEnvironment(dt, action);
 
@@ -462,333 +786,4 @@ Step_return Racing_Track::step(float dt, Action action)
 
     return r_step;
 }
-
-Float_State Racing_Track::StateToFloat_State(State state)
-{
-    Float_State new_state;
-    /*new_state.state.push_back(state.x);
-    new_state.state.push_back(state.y);
-    new_state.state.push_back(state.velocity);
-    new_state.state.push_back(state.angle);
-    new_state.state.push_back(state.angularVelocity);
-    new_state.state.push_back(state.currentCheckPoint);
-    new_state.state.push_back(state.wallHitX);
-    new_state.state.push_back(state.wallHitY);*/
-    new_state.state.push_back(state.l0);
-    new_state.state.push_back(state.l1);
-    new_state.state.push_back(state.l2);
-    new_state.state.push_back(state.l3);
-    new_state.state.push_back(state.l4);
-    new_state.state.push_back(state.velocity);
-    return new_state;
-}
-
-Float_Step_Return Racing_Track::StepReturnToFloatStepReturn(Step_return step_return)
-{
-    Float_Step_Return floatStepReturn;
-    floatStepReturn.state = StateToFloat_State(step_return.state);
-    floatStepReturn.next_state = StateToFloat_State(step_return.next_state);
-    floatStepReturn.reward = step_return.reward;
-    floatStepReturn.action = static_cast<float>(step_return.action);
-    floatStepReturn.terminated = static_cast<float>(step_return.terminated);
-    return floatStepReturn;
-}
-
-Full_Float_Step_Return Racing_Track::StepReturnToFullFLoatStepReturn(Step_return step_return)
-{
-    Full_Float_Step_Return floatStepReturn;
-    // state
-    floatStepReturn.data.push_back(step_return.state.l0);
-    floatStepReturn.data.push_back(step_return.state.l1);
-    floatStepReturn.data.push_back(step_return.state.l2);
-    floatStepReturn.data.push_back(step_return.state.l3);
-    floatStepReturn.data.push_back(step_return.state.l4);
-    floatStepReturn.data.push_back(step_return.state.velocity);
-    // new state
-    floatStepReturn.data.push_back(step_return.next_state.l0);
-    floatStepReturn.data.push_back(step_return.next_state.l1);
-    floatStepReturn.data.push_back(step_return.next_state.l2);
-    floatStepReturn.data.push_back(step_return.next_state.l3);
-    floatStepReturn.data.push_back(step_return.next_state.l4);
-    floatStepReturn.data.push_back(step_return.next_state.velocity);
-    // reward
-    floatStepReturn.data.push_back(step_return.reward);
-    // action
-    floatStepReturn.data.push_back(static_cast<float>(step_return.action));
-    // terminated
-    floatStepReturn.data.push_back(static_cast<float>(step_return.terminated));
-    return floatStepReturn;
-}
-
-float Racing_Track::edgeFunction(glm::vec2 a, glm::vec2 b, glm::vec2 p)
-{
-    return (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
-}
-
-Triangle Racing_Track::insideWhichTraingle(glm::vec2 point)
-{
-    Triangle triangle;
-
-    if (track.trackBorder.size() > 2)
-    {
-        vec2 A, B, C;
-        for (int i = 0; i < track.trackBorder.size() - 2; i++)
-        {
-            A = track.trackBorder[i];
-            B = track.trackBorder[i + 1];
-            C = track.trackBorder[i + 2];
-
-            if (insideATriangle(A, B, C, point))
-            {
-                triangle.A = A;
-                triangle.B = B;
-                triangle.C = C;
-                triangle.indexes[0] = i;
-                triangle.indexes[1] = i + 1;
-                triangle.indexes[2] = i + 2;
-            }
-        }
-
-        A = track.trackBorder[track.trackBorder.size() - 1];
-        B = track.trackBorder[track.trackBorder.size() - 2];
-        C = track.trackBorder[0];
-        if (insideATriangle(A, B, C, point))
-        {
-            triangle.A = B;
-            triangle.B = A;
-            triangle.C = C;
-            triangle.indexes[0] = track.trackBorder.size() - 2;
-            triangle.indexes[1] = track.trackBorder.size() - 1;
-            triangle.indexes[2] = 0;
-        }
-
-        A = track.trackBorder[track.trackBorder.size() - 2];
-        B = track.trackBorder[1];
-        C = track.trackBorder[0];
-        if (insideATriangle(A, B, C, point))
-        {
-            triangle.A = A;
-            triangle.B = B;
-            triangle.C = C;
-            triangle.indexes[0] = track.trackBorder.size() - 2;
-            triangle.indexes[1] = 1;
-            triangle.indexes[2] = 0;
-        }
-    }
-    return triangle;
-}
-
-bool Racing_Track::insideATriangle(glm::vec2 A, glm::vec2 B, glm::vec2 C, glm::vec2 point)
-{
-    float m0, m1, m2;
-    m0 = edgeFunction(A, B, point);
-    m1 = edgeFunction(B, C, point);
-    m2 = edgeFunction(C, A, point);
-    if ((m0 >= 0.0f && m1 >= 0.0f && m2 >= 0.0f) || (m0 < 0.0f && m1 < 0.0f && m2 < 0.0f)) return true;
-    return false;
-}
-
-bool Racing_Track::isOnTrack()
-{
-    vec2 A, B, C, D;
-    A = B = C = D = position;
-    vec2 l_size;
-
-    l_size = glm::rotate(vec2(-size.x, size.y), angle);
-    A += vec2(l_size.x * track.playerStartValues.w, l_size.y * track.playerStartValues.w);
-    l_size = glm::rotate(vec2(size.x, size.y), angle);
-    B += vec2(l_size.x * track.playerStartValues.w, l_size.y * track.playerStartValues.w);
-    l_size = glm::rotate(vec2(size.x, -size.y), angle);
-    C += vec2(l_size.x * track.playerStartValues.w, l_size.y * track.playerStartValues.w);
-    l_size = glm::rotate(vec2(-size.x, -size.y), angle);
-    D += vec2(l_size.x * track.playerStartValues.w, l_size.y * track.playerStartValues.w);
-
-    Triangle triangle = insideWhichTraingle(A);
-
-    if (triangle.indexes[0] == -1) return false;
-
-    triangle = insideWhichTraingle(B);
-    if (triangle.indexes[0] == -1) return false;
-
-    triangle = insideWhichTraingle(C);
-    if (triangle.indexes[0] == -1) return false;
-
-    triangle = insideWhichTraingle(D);
-    if (triangle.indexes[0] == -1) return false;
-
-    return true;
-}
-
-glm::vec3 Racing_Track::lineIntersect(glm::vec2 a, glm::vec2 b, glm::vec2 c, glm::vec2 d)
-{
-    vec2 r = b - a;
-    vec2 s = d - c;
-    float _d = r.x * s.y - r.y * s.x;
-    float u = ((c.x - a.x) * r.y - (c.y - a.y) * r.x) / _d;
-    float t = ((c.x - a.x) * s.y - (c.y - a.y) * s.x) / _d;
-    bool intersect = (0.0f <= u && u <= 1.0f && 0.0f <= t && t <= 1.0f);
-    r = a + t * r;
-    return vec3(r.x, r.y, static_cast<float>(intersect));
-}
-
-glm::vec2 Racing_Track::trackRaycast(glm::vec2 from, glm::vec2 to)
-{
-    vec2 intersectionPoint = vec2(0.0f);
-    float lenght = 10000, _lenght;
-    // glm::vec4 color(1.0f, 1.0f, 1.0f, 1.0f);
-    // bee::Engine.DebugRenderer().AddLine(bee::DebugCategory::General, from, to, color);
-    // color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-    if (track.trackBorder.size() > 2)
-    {
-        vec2 A, C;
-        vec3 result;
-        for (int i = 0; i < track.trackBorder.size() - 2; i++)
-        {
-            A = track.trackBorder[i];
-            C = track.trackBorder[i + 2];
-            result = lineIntersect(from, to, A, C);
-            if (static_cast<bool>(result.z))
-            {
-                _lenght = glm::length(vec2(result.x, result.y) - from);
-                if (_lenght < lenght)
-                {
-                    lenght = _lenght;
-                    intersectionPoint = vec2(result.x, result.y);
-                }
-            }
-        }
-
-        A = track.trackBorder[0];
-        C = track.trackBorder[track.trackBorder.size() - 1];
-        result = lineIntersect(from, to, A, C);
-        if (static_cast<bool>(result.z))
-        {
-            _lenght = glm::length(vec2(result.x, result.y) - from);
-            if (_lenght < lenght)
-            {
-                lenght = _lenght;
-                intersectionPoint = vec2(result.x, result.y);
-            }
-        }
-
-        A = track.trackBorder[1];
-        C = track.trackBorder[track.trackBorder.size() - 2];
-        result = lineIntersect(from, to, A, C);
-        if (static_cast<bool>(result.z))
-        {
-            _lenght = glm::length(vec2(result.x, result.y) - from);
-            if (_lenght < lenght)
-            {
-                lenght = _lenght;
-                intersectionPoint = vec2(result.x, result.y);
-            }
-        }
-    }
-
-    return intersectionPoint;
-}
-
-void Racing_Track::addTrackPoint(glm::vec2 point) { track.trackBorder.push_back(point); }
-
-void Racing_Track::removeLastTrackPoint()
-{
-    if (!track.trackBorder.empty()) track.trackBorder.pop_back();
-}
-
-void Racing_Track::addCheckpoint(glm::vec4 checkpoint) { track.checkpoints.push_back(checkpoint); }
-
-void Racing_Track::removeLastCheckpoint()
-{
-    if (!track.checkpoints.empty()) track.checkpoints.pop_back();
-}
-
-void Racing_Track::serializeTrack(std::string path)
-{
-    std::string data = " ";
-    for (auto& point : track.trackBorder)
-    {
-        data += std::to_string(point.x) + " " + std::to_string(point.y) + " ";
-    }
-    bee::Engine.FileIO().WriteTextFile(bee::FileIO::Directory::Asset, "Tracks/" + path + "_track.txt", data);
-
-    data = " ";
-    for (auto& point : track.checkpoints)
-    {
-        data += std::to_string(point.x) + " " + std::to_string(point.y) + " " + std::to_string(point.z) + " " +
-                std::to_string(point.w) + " ";
-    }
-    data += std::to_string(track.playerStartValues.x) + " " + std::to_string(track.playerStartValues.y) + " " +
-            std::to_string(track.playerStartValues.z) + " " + std::to_string(track.playerStartValues.w) + " ";
-    bee::Engine.FileIO().WriteTextFile(bee::FileIO::Directory::Asset, "Tracks/" + path + "_checkpoints.txt", data);
-}
-
-void Racing_Track::deserializeTrack(std::string path)
-{
-    track.trackBorder.clear();
-    track.checkpoints.clear();
-
-    std::string string_data;
-    std::string value;
-    std::vector<float> float_data;
-    float x, y, z, w;
-    std::string l_path = "Tracks/" + path + "_track.txt";
-    string_data = bee::Engine.FileIO().ReadTextFile(bee::FileIO::Directory::Asset, l_path);
-    while (string_data.size() > 1)
-    {
-        size_t initialPos = string_data.find(" ");
-        size_t finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        x = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        initialPos = string_data.find(" ");
-        finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        y = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-        track.trackBorder.push_back(glm::vec2(x, y));
-    }
-
-    float_data.clear();
-
-    l_path = "Tracks/" + path + "_checkpoints.txt";
-    string_data = bee::Engine.FileIO().ReadTextFile(bee::FileIO::Directory::Asset, l_path);
-    while (string_data.size() > 1)
-    {
-        size_t initialPos = string_data.find(" ");
-        size_t finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        x = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        initialPos = string_data.find(" ");
-        finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        y = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        initialPos = string_data.find(" ");
-        finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        z = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        initialPos = string_data.find(" ");
-        finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        w = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        track.checkpoints.push_back(glm::vec4(x, y, z, w));
-    }
-    if (track.checkpoints.size() >= 1)
-    {
-        track.playerStartValues = track.checkpoints[track.checkpoints.size() - 1];
-        track.checkpoints.pop_back();
-
-        carRotationSize.y = track.playerStartValues.w;
-        carRotationSize.x = track.playerStartValues.z;
-    }
-}
-
 ```
