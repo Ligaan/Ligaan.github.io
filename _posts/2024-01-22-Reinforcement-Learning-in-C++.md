@@ -14,6 +14,7 @@ After reading this blog and the associated materials you should be able to succe
 
 
 We will start by initializing the values for the Deep Learning algorithm. The environment that we will be using will be a grid of 4X4.
+
 ```cpp
     float l_epsilon = 0.9f; // this means that there is a 90% change to select a random action
     const float max_epsilon = 1.0f; // epsilon initial value
@@ -25,11 +26,23 @@ We will start by initializing the values for the Deep Learning algorithm. The en
     const int max_steps = 99; // the maximum number of steps that an agent can take inside the environment
     const float lr_rate = 0.7f; // the learning rate for the Q table
     const float gamma = 0.95f;
-
+```
+Next I will create the function that we will use in order to get a random action
+```cpp
     int RandomInt(int min, int max) { return min + (rand() % static_cast<int>(max - min + 1)); }
+```
 
+Now it is time to start defining the training environment. We will start by creatin the grid world and setting our position in the top left corner of the grid. The grid values signifie as followed:
+- 0 is an empty space
+- 1 is a hole in the ice, in this case similar to a trap
+- 2 is where the agent needs to go
+- 3 is where the player starts
+```cpp
     int target = 0;
     int tiles[4][4] = { {3, 0, 0, 0}, {0, 1, 0, 1}, {0, 0, 0, 1}, {1, 0, 0, 2} };
+```
+Now we need to create the Q-Table and set the actiona and observation spaces. The observation space in general is what the agent sees while training and the action space is what action he can performe. As for the Q-Table, the Q-Table represents a grid like space where we map the value of taking any possible action in a certain state of the environment, like for example we could be in our initial position from where we can performe 4 movement: go up, go down, go left and go right. The algorithm will fill the Q-Table with values based on how good an action is in a certain state.
+```cpp
     const int observation_space=16, action_space=4;
 
     float q_table[observation_space][action_space] = {0.0f};
@@ -37,6 +50,8 @@ We will start by initializing the values for the Deep Learning algorithm. The en
 
 Then we will create some functions to help us during the training.
 
+
+Will start with the structure of the information that we get when we take an action. This struct will tell us in which state are we after taking the action, the action that we took, the reward that we get from the environment for taking that action and if the simulation is done.
 ```C++
 struct step_return_values
 {
@@ -46,7 +61,10 @@ public:
     float reward;
     bool done;
 }step_values;
+```
 
+Now we will create a function for initializing the Q-Table.
+```cpp
 void init_q_table()
 {
     for (int i = 0; i < observation_space; i++)
@@ -57,9 +75,11 @@ void init_q_table()
         }
     }
 }
-
+```
+Then one function for getting the best action that we could take in a specific state based on the Q-Table.
+```cpp
 int q_table_max_row_value(int state) {
-    float value = std::max(std::max(q_table[state][0], q_table[state][1]), std::max(q_table[state][2], q_table[state][3]));
+    float value = q_table_max_row_reward(state);
     if (value == q_table[state][0]) return 0;
     if (value == q_table[state][1]) return 1;
     if (value == q_table[state][2]) return 2;
@@ -70,7 +90,9 @@ int q_table_max_row_value(int state) {
 float q_table_max_row_reward(int state) {
     return std::max(std::max(q_table[state][0], q_table[state][1]), std::max(q_table[state][2], q_table[state][3]));
 }
-
+```
+Now we will create the function responsible for giving us an action. This will be based on the greedy policy and epsilon greedy policy where we will decide an action based on a give epsilon and the state. Epsilon will define how often we want to take a random action. In the initial stage we want the agent to try random action until he starts to learn from them, and with each action we want to lower epsilon.
+```cpp
 int greedy_policy(int state) {
 
     return q_table_max_row_value(state);
