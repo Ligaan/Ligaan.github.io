@@ -787,3 +787,8 @@ Step_return Racing_Track::step(float dt, Action action)
     return r_step;
 }
 ```
+
+Now that we are done with the environment, if we combine the RL algorithm with this environment we should get something like this.
+
+![video](/Images/TrainedModel.gif)
+![video](/Images/TrainedModel2.gif)
