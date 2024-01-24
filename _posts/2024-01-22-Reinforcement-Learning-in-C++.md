@@ -240,7 +240,7 @@ for(int t = 0; t<max_steps && !done; t++)
 
 The result should be something like this:
 
-![video](Week_3_demo.mp4)
+![video](../_posts/Week_3_demo.mp4)
 
 ## DQN with Moon Lander and Racing Track
 
