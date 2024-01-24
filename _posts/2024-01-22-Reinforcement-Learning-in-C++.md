@@ -469,6 +469,7 @@ DQN(int state_size, int action_size) { DQN(state_size, action_size, 0); };
 
 DQN(){};
 
+//This will update the network every type we have enough data in the buffer
 void step()
 {
     if (timestep >= UPDATE_EVERY)
@@ -495,6 +496,7 @@ void addToExperienceBufferInBulk(std::vector<Full_Float_Step_Return>& values)
     buffer.addBulk(values);
 };
 
+// This will give us an action random or from the network based on the value of epsilon and a random number
 int act(Float_State state, float epsilon)
 {
     torch::NoGradGuard no_grad;
@@ -520,6 +522,7 @@ int act(Float_State state, float epsilon)
     return action;
 };
 
+// This will update the network layers values based on the experiences that we sampled and a fixed network that contains the previous state of the network
 void learn(Tensor_step_return experiences)
 {
     // this->q_network->train();
@@ -549,7 +552,8 @@ void learn(Tensor_step_return experiences)
     // this->q_network->eval();
 };
 
-void update_fixed_network(QNetwork& local_model, QNetwork& target_model)
+// This updates the fixed network with the last values of the current network
+void update_fixed_network()
 {
     torch::NoGradGuard no_grad;
 
@@ -560,18 +564,21 @@ void update_fixed_network(QNetwork& local_model, QNetwork& target_model)
     }
 };
 
+// This creates a checkpoint of the training that can be loaded and used later
 void checkpoint(std::string filepath)
 {
     torch::save(q_network, (filepath + "_network.pt").c_str());
     torch::save(*optimizer, (filepath + "_optimizer.pt").c_str());
 };
 
+// This loads a previously saved checkpoint of the training
 void loadCheckpoint(std::string filepath)
 {
     torch::load(q_network, (filepath + "_network.pt").c_str());
     torch::load(*optimizer, (filepath + "_optimizer.pt").c_str());
 };
 
+// This resets the training
 void resetLearning()
 {
     q_network->resetNetwork();
@@ -594,7 +601,9 @@ void resetLearning()
 };
 ```
 
-Now lets see how we will used everything above
+Now lets see how we will used everything above.
+
+First we declare some values similar to the Deep-Learning example
 
 ```C++
 const int max_episodes = 2000;
@@ -604,10 +613,15 @@ const int print_every = 100;
 const float eps_start = 1.0f;
 const float eps_decay = 100000;
 const float eps_min = 0.01f;
+```
 
+Then we create the environment and the DQN class
+```cpp
  agent = new DQN(8, 4, 0);// state size = 8 and action size = 4 for Lunar Lander
- env = new Lunar_Lander(projectionDimensions);
-
+ env = new Racing_Track(projectionDimensions);
+```
+Some variables that we will use later
+```cpp
 Action action = Action::Nothing;
 
 float score = 0;
@@ -618,7 +632,9 @@ float eps = eps_start;
 State state;
 
 Step_return step_return;
-
+```
+And now finnaly the training
+```cpp
    for(int episode = 0; episode <= max_episodes; episode++)
    {
        while (t > 0 && !done)
@@ -644,7 +660,7 @@ Step_return step_return;
        }
    }
 ```
-Now updating the network based on the previouse experiences that we collected, so the next step would be to use multiple environments at once for training, maybe something like this.
+Now if we want to speed up the training, we could train with multiple sets of data at once, like this.
 
 ```C++
 const int max_episodes = 2000;
@@ -745,8 +761,6 @@ action = static_cast<Action>(torch::argmax(action_values).item().toInt() % agent
 dt = 0.005f;
 env->step(0.005f, action);
 ```
-Now that we are done with the DQN its time to discuse a bit about environments.
-
-When training agent one in RL one of the most important if not the most important part of the training is the reward system. A good reward system could stimulate the agent to learn better and faster while a bad reward system could make the agent fail to learn something usefull. This shows some of the [gym environments](https://github.com/openai/gym/tree/master/gym/envs) whic might be a good space to look for examples.
+To conclude everything, even though some parts might seem confusing the purpose of this blog was to show you how the implementation would look. If you want to have a better understanding over what we went through just take you time, read through the materials recomended and come back after you have a better understanding over the theory behing DQN and Deep-Learning, or in general over RL algorithms.
 
 
