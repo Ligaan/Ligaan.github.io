@@ -512,14 +512,12 @@ int act(Float_State state, float epsilon)
         action_values = q_network->forward(t_state);
         action = static_cast<int>(torch::argmax(action_values).item().toInt() % action_size);
         currentStep++;
-        // std::cout << t_state << "\n" << action_values << "\n" << action << "\n\n";
         currentStep -= whenToPrint;
     }
     else
     {
         action = static_cast<int>(rand() % action_size);
     }
-    // std::cout << "\n" << action << "\n";
     return action;
 };
 
@@ -542,7 +540,6 @@ void learn(Tensor_step_return experiences)
     torch::Tensor Q_target = experiences.rewards + (GAMMA * max_action_values * (1 - experiences.dones));
     torch::Tensor Q_expected = q_network->forward(experiences.states).gather(1, experiences.actions.to(torch::kLong));
     torch::Tensor loss = torch::nn::functional::mse_loss(Q_expected, Q_target);
-    // std::cout << Q_target << "\n" << Q_expected << "\n" << loss << "\n";
     optimizer->zero_grad();
 
     loss.backward();
@@ -563,20 +560,6 @@ void update_fixed_network()
         fixed_network->parameters()[i].data().copy_(TAU * q_network->parameters()[i].data() +
                                                     (1.0f - TAU) * fixed_network->parameters()[i].data());
     }
-};
-
-// This creates a checkpoint of the training that can be loaded and used later
-void checkpoint(std::string filepath)
-{
-    torch::save(q_network, (filepath + "_network.pt").c_str());
-    torch::save(*optimizer, (filepath + "_optimizer.pt").c_str());
-};
-
-// This loads a previously saved checkpoint of the training
-void loadCheckpoint(std::string filepath)
-{
-    torch::load(q_network, (filepath + "_network.pt").c_str());
-    torch::load(*optimizer, (filepath + "_optimizer.pt").c_str());
 };
 
 // This resets the training
@@ -649,11 +632,6 @@ And now finnaly the training
         done = step_return.terminated;
         t--;
        }
-           if (episode % print_every == 0)
-           {
-               path = path + std::to_string(episode) + ".pth";
-               agent->checkpoint(path);
-           }
            env->reset();
            score = 0.0f;
            done = false;
@@ -738,14 +716,6 @@ Step_return step_return;
         envs[i].done = false;
         envs[i].steps = 0;
     }
-
-    if (episode % print_every == 0)
-    {
-        std::string path;
-        cout << mean_score << "\n";
-        path = "Checkpoints/" + std::to_string(episode);
-        agent->checkpoint(path);
-    }
    }
 ```
 The results would be something like this.
@@ -758,12 +728,6 @@ The results would be something like this.
 ![video](/Images/TrainedModel.gif)
 ![video](/Images/TrainedModel2.gif)
 
-And this is an example of how you could load a checkpoint for the DQN agent
-```C++
-std::string _path = "200";
-_path = "Checkpoints/" + _path;
-agent->loadCheckpoint(_path);
-```
 And this is how to use the agent after training
 
 ```C++
