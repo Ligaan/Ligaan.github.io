@@ -117,10 +117,6 @@ public:
     void addCheckpoint(glm::vec4 checkpoint);
     void removeLastCheckpoint();
 
-    // This will help us save and load tracks
-    void serializeTrack(std::string path);
-    void deserializeTrack(std::string path);
-
     //Mouse input conversion values
     glm::vec2 projectionDimensions;
     glm::vec2 gameWindowPos;
@@ -250,97 +246,6 @@ void Racing_Track::removeLastCheckpoint()
 }
 
 void Racing_Track::addTrackPoint(glm::vec2 point) { track.trackBorder.push_back(point); }
-```
-This functions are for loading and saving the tracks that we build
-```cpp
-void Racing_Track::serializeTrack(std::string path)
-{
-    std::string data = " ";
-    for (auto& point : track.trackBorder)
-    {
-        data += std::to_string(point.x) + " " + std::to_string(point.y) + " ";
-    }
-    bee::Engine.FileIO().WriteTextFile(bee::FileIO::Directory::Asset, "Tracks/" + path + "_track.txt", data);
-
-    data = " ";
-    for (auto& point : track.checkpoints)
-    {
-        data += std::to_string(point.x) + " " + std::to_string(point.y) + " " + std::to_string(point.z) + " " +
-                std::to_string(point.w) + " ";
-    }
-    data += std::to_string(track.playerStartValues.x) + " " + std::to_string(track.playerStartValues.y) + " " +
-            std::to_string(track.playerStartValues.z) + " " + std::to_string(track.playerStartValues.w) + " ";
-    bee::Engine.FileIO().WriteTextFile(bee::FileIO::Directory::Asset, "Tracks/" + path + "_checkpoints.txt", data);
-}
-
-void Racing_Track::deserializeTrack(std::string path)
-{
-    track.trackBorder.clear();
-    track.checkpoints.clear();
-
-    std::string string_data;
-    std::string value;
-    std::vector<float> float_data;
-    float x, y, z, w;
-    std::string l_path = "Tracks/" + path + "_track.txt";
-    string_data = bee::Engine.FileIO().ReadTextFile(bee::FileIO::Directory::Asset, l_path);
-    while (string_data.size() > 1)
-    {
-        size_t initialPos = string_data.find(" ");
-        size_t finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        x = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        initialPos = string_data.find(" ");
-        finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        y = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-        track.trackBorder.push_back(glm::vec2(x, y));
-    }
-
-    float_data.clear();
-
-    l_path = "Tracks/" + path + "_checkpoints.txt";
-    string_data = bee::Engine.FileIO().ReadTextFile(bee::FileIO::Directory::Asset, l_path);
-    while (string_data.size() > 1)
-    {
-        size_t initialPos = string_data.find(" ");
-        size_t finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        x = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        initialPos = string_data.find(" ");
-        finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        y = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        initialPos = string_data.find(" ");
-        finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        z = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        initialPos = string_data.find(" ");
-        finalPos = string_data.find(" ", 1);
-        value = string_data.substr(initialPos, finalPos - initialPos);
-        w = std::stof(value);
-        string_data = string_data.substr(finalPos, string_data.size() - finalPos);
-
-        track.checkpoints.push_back(glm::vec4(x, y, z, w));
-    }
-    if (track.checkpoints.size() >= 1)
-    {
-        track.playerStartValues = track.checkpoints[track.checkpoints.size() - 1];
-        track.checkpoints.pop_back();
-
-        carRotationSize.y = track.playerStartValues.w;
-        carRotationSize.x = track.playerStartValues.z;
-    }
-}
 ```
 
 Those are for checking if the and where the car is on the track
