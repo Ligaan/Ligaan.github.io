@@ -1,4 +1,4 @@
-## Disclaimer, the content used in this blog is part of a project made for buas (Breda University of Applied Science)
+![video](/Images/Logo_BUas_RGB.png)
 
 Now that we are done with the DQN, it is time to discuss a bit about environments.
 
