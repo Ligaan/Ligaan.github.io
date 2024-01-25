@@ -1,4 +1,4 @@
-![video](Images/Logo_BUas_RGB.png)
+![video](/Images/Logo_BUas_RGB.png)
 ### Hi my name is Andrei Cuprinsu and I am a second year PR student at buas.
 
 ### In here I'll will talk a bit about the reinforcement blog that will follow and my reasons for chosing to write about reinforcement learning. Feel free to jump straight to the blog if you want.
