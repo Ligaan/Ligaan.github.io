@@ -1,3 +1,5 @@
+## Disclaimer, the content used in this blog is part of a project made for buas (Breda University of Applied Science)
+
 Now that we are done with the DQN, it is time to discuss a bit about environments.
 
 When training an agent in an environment with RL algorithms, one of the key points in determining whether or not it learns how to solve the environment is the reward system. A good reward system could stimulate the agent to learn better and faster, while a bad reward system could make the agent fail to learn something useful. This shows some of the [gym environments](https://github.com/openai/gym/tree/master/gym/envs) which might be a good place to look for examples.
