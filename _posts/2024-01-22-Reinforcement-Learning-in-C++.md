@@ -476,7 +476,6 @@ void step()
         if (buffer.experiences.size() > BATCH_SIZE)
         {
             Tensor_step_return sampled_experiences = buffer.sample();
-            // printf("%i\n",buffer.experiences.size());
             learn(sampled_experiences);
         }
         timestep = timestep % UPDATE_EVERY;
