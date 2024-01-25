@@ -1,3 +1,4 @@
+![video](/Images/Logo_BUas_RGB.png)
 # Reinforcement Learning in C++ (Implementation focused)
 
 ## Disclaimer, the content used in this blog is part of a project made for buas (Breda University of Applied Science)
