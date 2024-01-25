@@ -114,14 +114,15 @@ int epsilon_greedy_policy(int state)
 }
 ```
 
-
 Now lets see how the update function and the reward system for this specific environment will look.
 The actioned are as followed:
 - 0 move right
 - 1 move up
 - 2 move left
 - 3 move down
+  
 As for the reward, the agent will get a positive reward if it finishes the map and if it hits a trap the simulation will be ended. The reset function will reset the environment to its initial state.
+
 ```C++
 step_return_values env_step(int state,int action) {
     int l_state=0;
