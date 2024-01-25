@@ -259,12 +259,10 @@ We'll start with the headers that we will need first
 #include <torch/nn/module.h>
 #include <torch/optim.h>
 #include <torch/torch.h>
-#include <torch/serialize/output-archive.h>
 
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <iostream>
 #include <iterator>
 #include <random>
 ```
