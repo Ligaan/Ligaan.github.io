@@ -1,5 +1,7 @@
 # Reinforcement Learning in C++ (Implementation focused)
 
+## Disclaimer, the content used in this blog is part of a project made for buas (Breda University of Applied Science)
+
 ## Introduction
 
 As the name suggests, this blog is about showcasing and explaining how you could use Reinforcement Learning with C++ while still comparing it to its python alternative and also briefly explaining some Reinforcement Learning concepts for a better understanding of the code. There will also be examples of how you could build training environments and how a reward function for an environment will look, but the explanations about why I did it and what alternatives there would be will be kept to a minimum.
