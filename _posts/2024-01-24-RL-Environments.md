@@ -2,7 +2,16 @@ Now that we are done with the DQN, it is time to discuss a bit about environment
 
 When training an agent in an environment with RL algorithms, one of the key points in determining whether or not it learns how to solve the environment is the reward system. A good reward system could stimulate the agent to learn better and faster, while a bad reward system could make the agent fail to learn something useful. This shows some of the [gym environments](https://github.com/openai/gym/tree/master/gym/envs) which might be a good place to look for examples.
 
-Let's start by creating some structs that we will use later.
+First, those are the includes that we will use
+```cpp
+#include <glm/glm.hpp>
+#include <vector>
+#include <string>
+#include "glm/gtx/rotate_vector.hpp"
+#include "cmath"
+```
+
+Now, let's start by creating some structs that we will use later.
 
 This will store all the information that you will need for loading/saving a track.
 ```C++
